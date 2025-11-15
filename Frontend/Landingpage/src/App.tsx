@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, lazy, Suspense, memo } from 'react';
+﻿import { useState, useEffect, memo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -17,17 +17,16 @@ import { CustomCursor } from './components/CustomCursor';
 import { BackgroundMusic } from './components/BackgroundMusic';
 import { useWalletStorageManager } from './hooks/useWalletStorageManager';
 import ErrorBoundary from './components/ErrorBoundary';
-import { LoadingSpinner } from './components/LoadingSpinner';
 
-// Lazy load heavy page components
-const DCAPage = lazy(() => import('./pages/dca/DCAPage').then(module => ({ default: module.DCAPage })));
-const MarketPage = lazy(() => import('./pages/market').then(module => ({ default: module.MarketPage })));
-const PortfolioPage = lazy(() => import('./pages/portfolio/PortfolioPage').then(module => ({ default: module.PortfolioPage })));
-const TransactionPage = lazy(() => import('./pages/transaction/TransactionPage').then(module => ({ default: module.TransactionPage })));
-const SwapPage = lazy(() => import('./pages/swap/SwapPage').then(module => ({ default: module.SwapPage })));
-const DepositPage = lazy(() => import('./pages/deposit/DepositPage').then(module => ({ default: module.DepositPage })));
-const VaultPage = lazy(() => import('./pages/vault/VaultPage').then(module => ({ default: module.VaultPage })));
-const SubscriptionPage = lazy(() => import('./pages/subscription/SubscriptionPage').then(module => ({ default: module.SubscriptionPage })));
+// Import all pages directly - no lazy loading for instant page switching
+import { DCAPage } from './pages/dca/DCAPage';
+import { MarketPage } from './pages/market';
+import { PortfolioPage } from './pages/portfolio/PortfolioPage';
+import { TransactionPage } from './pages/transaction/TransactionPage';
+import { SwapPage } from './pages/swap/SwapPage';
+import { DepositPage } from './pages/deposit/DepositPage';
+import { VaultPage } from './pages/vault/VaultPage';
+import { SubscriptionPage } from './pages/subscription/SubscriptionPage';
 
 type Page = 'landing' | 'dca' | 'market' | 'portfolio' | 'transactions' | 'swap' | 'deposit' | 'vault' | 'subscription';
 
@@ -87,27 +86,25 @@ const App = () => {
               setCurrentPage={setCurrentPage}
               sidebarOpen={isSidebarOpen}
             />
-            <Suspense fallback={<LoadingSpinner />}>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentPage}
-                  variants={pageVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={pageTransition}
-                >
-                  {currentPage === 'dca' && <DCAPage onSidebarToggle={setIsSidebarOpen} />}
-                  {currentPage === 'market' && <MarketPage />}
-                  {currentPage === 'portfolio' && <PortfolioPage />}
-                  {currentPage === 'transactions' && <TransactionPage />}
-                  {currentPage === 'swap' && <SwapPage />}
-                  {currentPage === 'deposit' && <DepositPage />}
-                  {currentPage === 'vault' && <VaultPage />}
-                  {currentPage === 'subscription' && <SubscriptionPage />}
-                </motion.div>
-              </AnimatePresence>
-            </Suspense>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentPage}
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={pageTransition}
+              >
+                {currentPage === 'dca' && <DCAPage onSidebarToggle={setIsSidebarOpen} />}
+                {currentPage === 'market' && <MarketPage />}
+                {currentPage === 'portfolio' && <PortfolioPage />}
+                {currentPage === 'transactions' && <TransactionPage />}
+                {currentPage === 'swap' && <SwapPage />}
+                {currentPage === 'deposit' && <DepositPage />}
+                {currentPage === 'vault' && <VaultPage />}
+                {currentPage === 'subscription' && <SubscriptionPage />}
+              </motion.div>
+            </AnimatePresence>
             <CustomCursor theme="app" />
           </>
         );
