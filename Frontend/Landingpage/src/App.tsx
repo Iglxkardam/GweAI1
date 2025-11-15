@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, lazy, Suspense, memo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { Problem } from './components/Problem';
@@ -16,7 +17,7 @@ import { CustomCursor } from './components/CustomCursor';
 import { BackgroundMusic } from './components/BackgroundMusic';
 import { useWalletStorageManager } from './hooks/useWalletStorageManager';
 import ErrorBoundary from './components/ErrorBoundary';
-import { PageSkeleton } from './components/Skeleton';
+import { LoadingSpinner } from './components/LoadingSpinner';
 
 // Lazy load heavy page components
 const DCAPage = lazy(() => import('./pages/dca/DCAPage').then(module => ({ default: module.DCAPage })));
@@ -58,6 +59,18 @@ const App = () => {
   }, [currentPage]);
 
   const renderPage = () => {
+    const pageVariants = {
+      initial: { opacity: 0, y: 20 },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: -20 }
+    };
+
+    const pageTransition = {
+      type: "tween",
+      ease: "easeInOut",
+      duration: 0.3
+    };
+
     switch (currentPage) {
       case 'dca':
       case 'market':
@@ -74,15 +87,26 @@ const App = () => {
               setCurrentPage={setCurrentPage}
               sidebarOpen={isSidebarOpen}
             />
-            <Suspense fallback={<PageSkeleton />}>
-              {currentPage === 'dca' && <DCAPage onSidebarToggle={setIsSidebarOpen} />}
-              {currentPage === 'market' && <MarketPage />}
-              {currentPage === 'portfolio' && <PortfolioPage />}
-              {currentPage === 'transactions' && <TransactionPage />}
-              {currentPage === 'swap' && <SwapPage />}
-              {currentPage === 'deposit' && <DepositPage />}
-              {currentPage === 'vault' && <VaultPage />}
-              {currentPage === 'subscription' && <SubscriptionPage />}
+            <Suspense fallback={<LoadingSpinner />}>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentPage}
+                  variants={pageVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={pageTransition}
+                >
+                  {currentPage === 'dca' && <DCAPage onSidebarToggle={setIsSidebarOpen} />}
+                  {currentPage === 'market' && <MarketPage />}
+                  {currentPage === 'portfolio' && <PortfolioPage />}
+                  {currentPage === 'transactions' && <TransactionPage />}
+                  {currentPage === 'swap' && <SwapPage />}
+                  {currentPage === 'deposit' && <DepositPage />}
+                  {currentPage === 'vault' && <VaultPage />}
+                  {currentPage === 'subscription' && <SubscriptionPage />}
+                </motion.div>
+              </AnimatePresence>
             </Suspense>
             <CustomCursor theme="app" />
           </>
@@ -90,7 +114,14 @@ const App = () => {
       case 'landing':
       default:
         return (
-          <div className="min-h-screen bg-black">
+          <motion.div
+            className="min-h-screen bg-black"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
             <Navbar />
             <Hero onStartInvesting={() => setCurrentPage('dca')} />
             <Problem />
@@ -103,7 +134,7 @@ const App = () => {
             <FAQ />
             <CTA />
             <Footer />
-          </div>
+          </motion.div>
         );
     }
   };

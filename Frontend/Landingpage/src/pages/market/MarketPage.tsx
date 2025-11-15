@@ -28,6 +28,7 @@ export const MarketPage: React.FC = () => {
   const { ethBalance, usdcBalance, connected, address } = useAgwWallet();
   
   const [selectedPair, setSelectedPair] = useState<TradingPair>('ETH/USDC');
+  const [isLoading, setIsLoading] = useState(true);
   const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
   const [price, setPrice] = useState('');
   const [amount, setAmount] = useState('');
@@ -44,6 +45,8 @@ export const MarketPage: React.FC = () => {
   // Initialize TradingView widget
   useEffect(() => {
     if (!chartContainerRef.current) return;
+
+    setIsLoading(true);
 
     // Clear any existing content
     chartContainerRef.current.innerHTML = '';
@@ -88,8 +91,12 @@ export const MarketPage: React.FC = () => {
               'paneProperties.horzGridProperties.color': 'rgba(255, 255, 255, 0.03)',
             },
           });
+          
+          // Hide loading after widget initializes
+          setTimeout(() => setIsLoading(false), 1000);
         } catch (error) {
           console.error('TradingView widget error:', error);
+          setIsLoading(false);
         }
       }
     };
@@ -454,6 +461,14 @@ export const MarketPage: React.FC = () => {
               
               {/* TradingView Lightweight Charts Container */}
               <div className="relative" style={{height: 'calc(100% - 50px)', overflow: 'hidden'}}>
+                {isLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-10">
+                    <div className="relative">
+                      <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                      <div className="absolute inset-0 m-auto w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse" />
+                    </div>
+                  </div>
+                )}
                 <div ref={chartContainerRef} className="w-full h-full" />
               </div>
               
