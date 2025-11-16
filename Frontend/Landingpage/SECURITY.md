@@ -199,24 +199,24 @@ frame-ancestors 'none'
 
 ## 🎯 **Attack Prevention Matrix**
 
-| Attack Type           | Risk Level  | Protected | Detection  | Response      |
-| --------------------- | ----------- | --------- | ---------- | ------------- |
-| UI Tampering          | 🔴 Critical | ✅ Yes    | Real-time  | Auto-restore  |
-| Phishing Overlay      | 🔴 Critical | ✅ Yes    | Real-time  | Auto-remove   |
-| Clipboard Hijack      | 🟠 High     | ✅ Yes    | On paste   | Alert user    |
-| Malicious TX          | 🔴 Critical | ✅ Yes    | Pre-sign   | Block & warn  |
-| Fake RPC              | 🟠 High     | ✅ Yes    | On connect | Block         |
-| XSS Attack            | 🔴 Critical | ✅ Yes    | CSP        | Block         |
-| Console Scam          | 🟡 Medium   | ✅ Yes    | Always     | Warn          |
-| MITM Attack           | 🔴 Critical | ✅ Yes    | HTTPS only | Block         |
-| Keylogger             | 🔴 Critical | ✅ Yes    | Input      | Virtual KB    |
-| Screen Capture        | 🟠 High     | ✅ Yes    | On detect  | Warn user     |
-| Malicious Extensions  | 🟠 High     | ✅ Yes    | On load    | Alert & block |
-| Session Hijacking     | 🟠 High     | ✅ Yes    | Timeout    | Auto-logout   |
-| Memory Dumping        | 🔴 Critical | ✅ Yes    | Always     | Redact data   |
-| DevTools Exploit      | 🟡 Medium   | ✅ Yes    | On open    | Extra warning |
-| Network Interception  | 🔴 Critical | ✅ Yes    | Per request| Block         |
-| Browser Manipulation  | 🟠 High     | ✅ Yes    | On load    | Warn user     |
+| Attack Type          | Risk Level  | Protected | Detection   | Response      |
+| -------------------- | ----------- | --------- | ----------- | ------------- |
+| UI Tampering         | 🔴 Critical | ✅ Yes    | Real-time   | Auto-restore  |
+| Phishing Overlay     | 🔴 Critical | ✅ Yes    | Real-time   | Auto-remove   |
+| Clipboard Hijack     | 🟠 High     | ✅ Yes    | On paste    | Alert user    |
+| Malicious TX         | 🔴 Critical | ✅ Yes    | Pre-sign    | Block & warn  |
+| Fake RPC             | 🟠 High     | ✅ Yes    | On connect  | Block         |
+| XSS Attack           | 🔴 Critical | ✅ Yes    | CSP         | Block         |
+| Console Scam         | 🟡 Medium   | ✅ Yes    | Always      | Warn          |
+| MITM Attack          | 🔴 Critical | ✅ Yes    | HTTPS only  | Block         |
+| Keylogger            | 🔴 Critical | ✅ Yes    | Input       | Virtual KB    |
+| Screen Capture       | 🟠 High     | ✅ Yes    | On detect   | Warn user     |
+| Malicious Extensions | 🟠 High     | ✅ Yes    | On load     | Alert & block |
+| Session Hijacking    | 🟠 High     | ✅ Yes    | Timeout     | Auto-logout   |
+| Memory Dumping       | 🔴 Critical | ✅ Yes    | Always      | Redact data   |
+| DevTools Exploit     | 🟡 Medium   | ✅ Yes    | On open     | Extra warning |
+| Network Interception | 🔴 Critical | ✅ Yes    | Per request | Block         |
+| Browser Manipulation | 🟠 High     | ✅ Yes    | On load     | Warn user     |
 
 ---
 
@@ -250,6 +250,7 @@ frame-ancestors 'none'
 ### **9. Keylogger & Screen Capture Attacks**
 
 #### **Attack Scenario:**
+
 - Keylogger malware captures private keys/seed phrases
 - Screen recording software records sensitive information
 - Screen sharing exposes wallet details
@@ -257,16 +258,19 @@ frame-ancestors 'none'
 #### **Protection Implemented:**
 
 ✅ **Virtual Keyboard**
+
 - Randomized key layout for sensitive inputs
 - Prevents keystroke logging
 - Masked input display
 
 ✅ **Screen Capture Detection**
+
 - Detects getDisplayMedia API usage
 - Warns users when screen sharing active
 - Alerts to never share screen during wallet access
 
 ✅ **Protected Input Fields**
+
 - Anti-keylogger protection for sensitive inputs
 - Actual value stored securely, not in DOM
 - Display only masked characters
@@ -276,6 +280,7 @@ frame-ancestors 'none'
 ### **10. Malicious Browser Extensions**
 
 #### **Attack Scenario:**
+
 - Fake wallet extensions steal credentials
 - Modified Web3 providers intercept transactions
 - Extensions inject malicious scripts
@@ -283,6 +288,7 @@ frame-ancestors 'none'
 #### **Protection Implemented:**
 
 ✅ **Extension Detection**
+
 - Scans for suspicious extension signatures
 - Detects modified Web3 providers
 - Checks for common wallet-stealing patterns
@@ -293,6 +299,7 @@ frame-ancestors 'none'
 ### **11. Session Hijacking & Timeout**
 
 #### **Attack Scenario:**
+
 - User leaves wallet connected on shared computer
 - Attacker accesses unlocked wallet
 - Prolonged sessions increase risk
@@ -300,6 +307,7 @@ frame-ancestors 'none'
 #### **Protection Implemented:**
 
 ✅ **SessionManager**
+
 - 15-minute automatic timeout
 - Activity-based session refresh
 - Clears sensitive data on timeout
@@ -310,6 +318,7 @@ frame-ancestors 'none'
 ### **12. Memory Dumping Attacks**
 
 #### **Attack Scenario:**
+
 - Malware dumps browser memory
 - Private keys extracted from memory
 - JSON.stringify exposes sensitive data
@@ -317,6 +326,7 @@ frame-ancestors 'none'
 #### **Protection Implemented:**
 
 ✅ **Memory Protection**
+
 - Overrides JSON.stringify for sensitive objects
 - Redacts private keys, mnemonics, passwords
 - Prevents sensitive data serialization
@@ -327,6 +337,7 @@ frame-ancestors 'none'
 ### **13. Developer Tools Exploitation**
 
 #### **Attack Scenario:**
+
 - Scammers tell users to open DevTools
 - Users paste malicious code
 - Wallet data stolen via console
@@ -334,6 +345,7 @@ frame-ancestors 'none'
 #### **Protection Implemented:**
 
 ✅ **DevTools Detection**
+
 - Monitors for developer tools opening
 - Shows additional warnings when detected
 - Educates users about console scams
@@ -343,6 +355,7 @@ frame-ancestors 'none'
 ### **14. Network Traffic Interception**
 
 #### **Attack Scenario:**
+
 - MITM attacks intercept transaction data
 - Malicious requests to steal wallet info
 - Unauthorized external API calls
@@ -350,6 +363,7 @@ frame-ancestors 'none'
 #### **Protection Implemented:**
 
 ✅ **NetworkMonitor Class**
+
 - Intercepts all fetch and XHR requests
 - Blocks suspicious URLs
 - Maintains blocklist of malicious domains
@@ -361,6 +375,7 @@ frame-ancestors 'none'
 ### **15. Browser Integrity Attacks**
 
 #### **Attack Scenario:**
+
 - Headless browser automation
 - Modified browser environments
 - VM/sandbox environments for credential theft
@@ -368,6 +383,7 @@ frame-ancestors 'none'
 #### **Protection Implemented:**
 
 ✅ **Browser Verification**
+
 - Detects browser automation (Selenium, WebDriver)
 - Identifies headless browsers
 - Checks for VM/sandbox environments

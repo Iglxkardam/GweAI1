@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaChartLine, FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 import { StarfieldBackground } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 
@@ -41,15 +42,14 @@ export const MarketPage: React.FC = () => {
   const tradesPerPage = 10;
   
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const widgetInstanceRef = useRef<any>(null);
+  const isChartInitialized = useRef(false);
 
-  // Initialize TradingView widget
+  // Initialize TradingView widget only once
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (!chartContainerRef.current || isChartInitialized.current) return;
 
     setIsLoading(true);
-
-    // Clear any existing content
-    chartContainerRef.current.innerHTML = '';
 
     // Create container for widget first
     const widgetContainer = document.createElement('div');
@@ -65,7 +65,7 @@ export const MarketPage: React.FC = () => {
     script.onload = () => {
       if (window.TradingView && chartContainerRef.current) {
         try {
-          new window.TradingView.widget({
+          widgetInstanceRef.current = new window.TradingView.widget({
             autosize: true,
             symbol: TRADING_PAIRS[selectedPair].tradingViewSymbol,
             interval: 'D',
@@ -92,6 +92,7 @@ export const MarketPage: React.FC = () => {
             },
           });
           
+          isChartInitialized.current = true;
           // Hide loading after widget initializes
           setTimeout(() => setIsLoading(false), 1000);
         } catch (error) {
@@ -108,6 +109,23 @@ export const MarketPage: React.FC = () => {
         script.parentNode.removeChild(script);
       }
     };
+  }, []);
+
+  // Update chart symbol when pair changes
+  useEffect(() => {
+    if (widgetInstanceRef.current && isChartInitialized.current) {
+      try {
+        widgetInstanceRef.current.setSymbol(
+          TRADING_PAIRS[selectedPair].tradingViewSymbol,
+          'D',
+          () => {
+            console.log('Chart symbol updated to:', TRADING_PAIRS[selectedPair].tradingViewSymbol);
+          }
+        );
+      } catch (error) {
+        console.error('Error updating chart symbol:', error);
+      }
+    }
   }, [selectedPair]);
 
   // Fetch real-time price from Binance API (same data source as TradingView)
@@ -238,7 +256,7 @@ export const MarketPage: React.FC = () => {
 
 
   return (
-    <div 
+    <motion.div 
       className="min-h-screen pt-20 pb-8 px-4 relative"
       style={{
         background: '#000',
@@ -247,6 +265,10 @@ export const MarketPage: React.FC = () => {
           radial-gradient(circle at 20% 80%, rgba(41, 196, 255, 0.13), transparent)
         `
       }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
     >
       <StarfieldBackground optimized={true} />
       <div className="max-w-7xl mx-auto relative z-10">
@@ -463,10 +485,7 @@ export const MarketPage: React.FC = () => {
               <div className="relative" style={{height: 'calc(100% - 50px)', overflow: 'hidden'}}>
                 {isLoading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-10">
-                    <div className="relative">
-                      <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-                      <div className="absolute inset-0 m-auto w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse" />
-                    </div>
+                    <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
                   </div>
                 )}
                 <div ref={chartContainerRef} className="w-full h-full" />
@@ -568,6 +587,6 @@ export const MarketPage: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

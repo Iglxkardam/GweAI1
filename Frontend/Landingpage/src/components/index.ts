@@ -26,3 +26,7 @@ export { SocialProof } from './SocialProof';
 export { FAQ } from './FAQ';
 export { CTA } from './CTA';
 export { Footer } from './Footer';
+
+// Loading Components
+export { SimpleLoader } from './SimpleLoader';
+export * from './Skeleton';
