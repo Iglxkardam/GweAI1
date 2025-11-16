@@ -8,7 +8,7 @@ interface PurchaseModalProps {
   onClose: () => void;
   plan: SubscriptionPlan | null;
   onConfirm: () => Promise<void>;
-  status: 'idle' | 'approving' | 'purchasing' | 'success' | 'error';
+  status: 'idle' | 'approving' | 'approved' | 'purchasing' | 'success' | 'error';
   errorMessage?: string;
   usdcBalance?: string;
 }
@@ -35,6 +35,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
       case 'approving':
       case 'purchasing':
         return <FaSpinner className="w-12 h-12 text-blue-500 animate-spin" />;
+      case 'approved':
+        return <FaCheckCircle className="w-12 h-12 text-green-500" />;
       case 'success':
         return <FaCheckCircle className="w-12 h-12 text-green-500" />;
       case 'error':
@@ -47,9 +49,11 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
   const getStatusMessage = () => {
     switch (status) {
       case 'approving':
-        return 'Approving USDC...';
+        return 'Step 1/2: Approving USDC spending...';
+      case 'approved':
+        return 'Approval confirmed! Preparing purchase...';
       case 'purchasing':
-        return 'Purchasing subscription...';
+        return 'Step 2/2: Purchasing subscription...';
       case 'success':
         return 'Subscription purchased successfully!';
       case 'error':
@@ -179,18 +183,38 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                       </div>
                     )}
 
+                    {/* Chrome Pop-up Warning */}
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
+                      <p className="text-xs text-blue-300 text-center leading-relaxed">
+                        💡 <strong>Note:</strong> You'll be prompted <strong>twice</strong> - once to approve USDC, then to confirm purchase. If wallet popup doesn't appear, check your browser's address bar for blocked pop-ups.
+                      </p>
+                    </div>
+                    
                     {/* Info */}
                     <p className="text-xs text-gray-400 text-center">
-                      You'll need to approve USDC spending and confirm the
-                      purchase transaction.
+                      Step 1: Approve USDC → Step 2: Confirm Purchase
                     </p>
                   </>
                 )}
 
                 {status !== 'idle' && (
-                  <p className="text-center text-white/70 text-sm mb-3">
-                    {getStatusMessage()}
-                  </p>
+                  <>
+                    <p className="text-center text-white/70 text-sm mb-3">
+                      {getStatusMessage()}
+                    </p>
+                    
+                    {/* Wallet popup blocked warning for approving/purchasing */}
+                    {(status === 'approving' || status === 'approved' || status === 'purchasing') && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-3">
+                        <p className="text-xs text-yellow-300 text-center leading-relaxed">
+                          {status === 'approved' 
+                            ? '✅ Step 1 complete! Preparing Step 2...' 
+                            : '⚠️ Wallet popup not appearing? Check your browser\'s address bar (top-left) for a blocked popup icon 🚫. Click it and select "Always allow pop-ups for this site".'
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

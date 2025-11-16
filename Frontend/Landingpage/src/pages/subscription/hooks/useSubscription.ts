@@ -37,7 +37,10 @@ interface UseSubscriptionReturn {
   usdcBalance: string;
   
   // Actions
-  purchasePlan: (planType: PlanType) => Promise<void>;
+  purchasePlan: (
+    planType: PlanType,
+    onProgress?: (step: 'approving' | 'approved' | 'purchasing' | 'success' | 'error') => void
+  ) => Promise<void>;
   
   // Loading and error states
   isLoading: boolean;
@@ -131,15 +134,20 @@ export function useSubscription(): UseSubscriptionReturn {
 
   const { writeContractAsync } = useWriteContract();
 
-  // Purchase plan function
-  const purchasePlan = async (planType: PlanType) => {
+  // Purchase plan function with Chrome pop-up protection
+  const purchasePlan = async (
+    planType: PlanType,
+    onProgress?: (step: 'approving' | 'approved' | 'purchasing' | 'success' | 'error') => void
+  ) => {
     if (!address || !isConnected) {
       setError('Please connect your wallet');
+      onProgress?.('error');
       return;
     }
 
     if (planType === PlanType.FREE) {
       setError('Cannot purchase free plan');
+      onProgress?.('error');
       return;
     }
 
@@ -147,6 +155,7 @@ export function useSubscription(): UseSubscriptionReturn {
     setError(null);
 
     try {
+      onProgress?.('approving');
       // Plan prices
       const prices: Record<PlanType, bigint> = {
         [PlanType.FREE]: BigInt(0),
@@ -155,9 +164,13 @@ export function useSubscription(): UseSubscriptionReturn {
       };
       const price = prices[planType];
       
-      console.log('[useSubscription] Step 1: Approving USDC:', price.toString());
+      console.log('[useSubscription] 💳 Starting purchase flow for plan:', planType);
+      console.log('[useSubscription] 💰 Price:', price.toString(), 'USDC');
       
-      // Step 1: Approve USDC spending
+      // Step 1: Approve USDC spending (First user action)
+      console.log('[useSubscription] ⏳ Step 1/2: Requesting USDC approval...');
+      console.log('[useSubscription] 👆 Please approve the transaction in your wallet');
+      
       const approveHash = await writeContractAsync({
         address: USDC_TOKEN_ADDRESS as `0x${string}`,
         abi: ERC20_ABI,
@@ -165,14 +178,32 @@ export function useSubscription(): UseSubscriptionReturn {
         args: [SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`, price],
       });
       
-      console.log('[useSubscription] Approve tx hash:', approveHash);
+      console.log('[useSubscription] ✅ Approval transaction submitted:', approveHash);
+      console.log('[useSubscription] ⏳ Waiting for approval to be mined...');
       
-      // Wait for approval to be mined
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Wait for approval confirmation (minimum 2 blocks)
+      if (publicClient) {
+        await publicClient.waitForTransactionReceipt({
+          hash: approveHash,
+          confirmations: 1,
+        });
+        console.log('[useSubscription] ✅ Approval confirmed on-chain');
+        onProgress?.('approved');
+      } else {
+        // Fallback: wait 5 seconds if no publicClient
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        onProgress?.('approved');
+      }
       
-      console.log('[useSubscription] Step 2: Purchasing plan:', planType);
+      // Small delay to prevent Chrome pop-up blocking (user-initiated flow)
+      console.log('[useSubscription] ⏳ Preparing purchase transaction...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Step 2: Purchase the plan
+      // Step 2: Purchase the plan (Second user action)
+      onProgress?.('purchasing');
+      console.log('[useSubscription] ⏳ Step 2/2: Requesting plan purchase...');
+      console.log('[useSubscription] 👆 Please confirm the purchase in your wallet');
+      
       const purchaseHash = await writeContractAsync({
         address: SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`,
         abi: SUBSCRIPTION_PLAN_ABI,
@@ -180,25 +211,52 @@ export function useSubscription(): UseSubscriptionReturn {
         args: [planType],
       });
       
-      console.log('[useSubscription] Purchase tx hash:', purchaseHash);
+      console.log('[useSubscription] ✅ Purchase transaction submitted:', purchaseHash);
+      console.log('[useSubscription] ⏳ Waiting for purchase to be mined...');
       
-      // Wait for purchase to be mined
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Wait for purchase confirmation
+      if (publicClient) {
+        await publicClient.waitForTransactionReceipt({
+          hash: purchaseHash,
+          confirmations: 1,
+        });
+        console.log('[useSubscription] ✅ Purchase confirmed on-chain');
+      } else {
+        // Fallback: wait 5 seconds if no publicClient
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
       
-      // Refresh data
+      console.log('[useSubscription] 🎉 Subscription purchased successfully!');
+      onProgress?.('success');
+      
+      // Clear cache and refresh data
+      if (address) {
+        subscriptionCache.delete(address.toLowerCase());
+      }
       await fetchSubscriptionData();
     } catch (err) {
-      console.error('Error purchasing subscription:', err);
+      console.error('[useSubscription] ❌ Error purchasing subscription:', err);
+      onProgress?.('error');
       
       // Handle user rejection gracefully
       if (err instanceof Error) {
-        if (err.message.includes('user rejected') || err.message.includes('User rejected')) {
-          setError('Transaction cancelled');
+        if (err.message.includes('user rejected') || 
+            err.message.includes('User rejected') ||
+            err.message.includes('user denied') ||
+            err.message.includes('User denied')) {
+          setError('Transaction cancelled by user');
+          console.log('[useSubscription] ℹ️ User cancelled the transaction');
+        } else if (err.message.includes('insufficient funds')) {
+          setError('Insufficient USDC balance');
+          console.log('[useSubscription] ℹ️ Insufficient funds');
+        } else if (err.message.includes('Failed to initialize')) {
+          setError('Wallet connection issue. Please try reconnecting your wallet.');
+          console.log('[useSubscription] ℹ️ Wallet initialization failed - may be Chrome pop-up blocker');
         } else {
           setError(err.message);
         }
       } else {
-        setError('Failed to purchase subscription');
+        setError('Failed to purchase subscription. Please try again.');
       }
       
       throw err;

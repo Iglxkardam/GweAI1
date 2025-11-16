@@ -22,7 +22,7 @@ export const SubscriptionPage: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [purchaseStatus, setPurchaseStatus] = useState<
-    'idle' | 'approving' | 'purchasing' | 'success' | 'error'
+    'idle' | 'approving' | 'approved' | 'purchasing' | 'success' | 'error'
   >('idle');
   const [purchaseError, setPurchaseError] = useState<string | undefined>();
 
@@ -58,24 +58,26 @@ export const SubscriptionPage: React.FC = () => {
     if (!selectedPlan) return;
 
     try {
-      setPurchaseStatus('approving');
-      
-      // Call the purchase function
-      await purchasePlan(selectedPlan.planType);
-      
-      setPurchaseStatus('success');
-      
-      // Refresh subscription data
-      setTimeout(() => {
-        refetch();
-        setIsModalOpen(false);
-        setPurchaseStatus('idle');
-      }, 2000);
+      // Call the purchase function with progress tracking
+      await purchasePlan(selectedPlan.planType, (step) => {
+        console.log('[SubscriptionPage] Purchase step:', step);
+        setPurchaseStatus(step);
+        
+        // Auto-close modal on success after 2 seconds
+        if (step === 'success') {
+          setTimeout(() => {
+            refetch();
+            setIsModalOpen(false);
+            setPurchaseStatus('idle');
+          }, 2000);
+        }
+      });
     } catch (err) {
-      setPurchaseStatus('error');
+      // Error already handled by onProgress callback
       setPurchaseError(
         err instanceof Error ? err.message : 'Failed to purchase subscription'
       );
+      console.error('[SubscriptionPage] Purchase error:', err);
     }
   };
 
