@@ -29,4 +29,3 @@ export { Footer } from './Footer';
 
 // Loading Components
 export { SimpleLoader } from './SimpleLoader';
-export * from './Skeleton';
