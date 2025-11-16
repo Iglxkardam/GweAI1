@@ -77,12 +77,38 @@ export const useAgwWallet = () => {
 
   /**
    * Sign out and disconnect wallet
+   * Clears all wallet-related storage to prevent cache conflicts
    */
   const signOut = useCallback(async () => {
     try {
       console.log('👋 Signing out...');
+      
+      // Clear all Abstract Global Wallet storage
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('agw') || 
+            key.includes('abstract') || 
+            key.includes('wallet') || 
+            key.includes('privy') ||
+            key.includes('wagmi')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Clear sessionStorage as well
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.includes('agw') || 
+            key.includes('abstract') || 
+            key.includes('wallet') || 
+            key.includes('privy') ||
+            key.includes('wagmi')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+      
+      // Disconnect wallet
       disconnect();
-      // Let React hooks handle state update naturally, no reload needed
+      
+      console.log('✅ Wallet disconnected and storage cleared');
     } catch (error) {
       console.error('Sign out error:', error);
     }
