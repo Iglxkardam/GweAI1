@@ -40,7 +40,7 @@ export const LoadingScreen: React.FC = () => {
             ease: "easeInOut"
           }}
         >
-          Loading wallet...
+          Loading ...
         </motion.p>
       </div>
     </div>
