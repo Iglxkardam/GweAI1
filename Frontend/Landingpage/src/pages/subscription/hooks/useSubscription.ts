@@ -362,38 +362,7 @@ export function useSubscription(): UseSubscriptionReturn {
         }
       }
       
-      // Verify approval was successful by checking allowance again
-      console.log('[useSubscription] 🔍 Verifying final allowance...');
-      const allowanceData = encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: 'allowance',
-        args: [address as `0x${string}`, SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`],
-      });
-      
-      const allowanceResult = await walletClient.request({
-        method: 'eth_call',
-        params: [
-          {
-            to: USDC_TOKEN_ADDRESS,
-            data: allowanceData,
-          },
-          'latest',
-        ],
-      });
-      
-      const allowance = BigInt(allowanceResult as string);
-      console.log('[useSubscription] ✅ Current allowance:', allowance.toString(), 'USDC (raw)');
-      console.log('[useSubscription] ✅ Required amount:', price.toString(), 'USDC (raw)');
-      
-      if (allowance < price) {
-        throw new Error(`Approval failed! Allowance (${allowance}) is less than required (${price})`);
-      }
-      
       onProgress?.('approved');
-      
-      // Extra wait to ensure approval is visible across all nodes
-      console.log('[useSubscription] ⏳ Extra wait for network propagation (3 seconds)...');
-      await new Promise(resolve => setTimeout(resolve, 3000));
       
       // Step 2: Purchase the plan - manually encode to avoid ABI issues
       onProgress?.('purchasing');
@@ -451,36 +420,6 @@ export function useSubscription(): UseSubscriptionReturn {
       } catch (receiptErr: any) {
         console.error('[useSubscription] ❌ Error waiting for receipt:', receiptErr);
         throw new Error(`Transaction failed: ${receiptErr.message}`);
-      }
-      
-      // Extra wait to ensure state is updated
-      console.log('[useSubscription] ⏳ Waiting for state update (5 seconds)...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      
-      // Verify the purchase was successful by checking subscription
-      console.log('[useSubscription] 🔍 Verifying purchase on contract...');
-      const { readContract } = await import('viem/actions');
-      const { SUBSCRIPTION_PLAN_ABI } = await import('../services/contractService');
-      
-      const verifyResult: any = await readContract(walletClient, {
-        address: SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`,
-        abi: SUBSCRIPTION_PLAN_ABI,
-        functionName: 'getSubscription',
-        args: [address as `0x${string}`],
-      });
-      
-      console.log('[useSubscription] 📊 Post-purchase subscription:', {
-        planType: Number(verifyResult[0]),
-        expiry: verifyResult[1].toString(),
-        hasAccess: verifyResult[2],
-        isExpired: verifyResult[3],
-      });
-      
-      // Check if subscription updated to the purchased plan
-      if (Number(verifyResult[0]) !== planType && verifyResult[2] === false) {
-        console.error('[useSubscription] ❌ Purchase transaction succeeded but subscription not updated!');
-        console.error('[useSubscription] This means the contract reverted or payment failed');
-        throw new Error('Purchase transaction succeeded but subscription not activated. Check transaction on BaseScan.');
       }
       
       console.log('[useSubscription] 🎉 Subscription purchased successfully!');

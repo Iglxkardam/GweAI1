@@ -8,11 +8,11 @@
  * - Real-time balance updates
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaWallet, FaHistory, FaSync, FaArrowRight, FaTimes, FaPlus } from 'react-icons/fa';
-import { StarfieldBackground, NetworkSwitcher } from '../../components';
-import { useComprehensiveWallet } from '../../hooks/useComprehensiveWallet';
+import { FaWallet, FaHistory, FaSync, FaArrowRight, FaTimes } from 'react-icons/fa';
+import { StarfieldBackground } from '../../components';
+import { LoadingScreen } from '../../components/LoadingScreen';
 import { useAgwWallet } from './hooks/useAgwWallet';
 import { WalletConnectButton } from './components/WalletConnectButton';
 import { DepositCard } from './components/DepositCard';
@@ -20,15 +20,12 @@ import { formatRelativeTime, formatBalanceWithSymbol, getExplorerUrl } from './u
 import type { Transaction } from './types/wallet.types';
 import { isAddress } from 'viem';
 import { useCryptoPrice } from '../../hooks/useCryptoPrice';
+import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 
 export const DepositPage: React.FC = () => {
-  // Use both hooks - comprehensive for new features, AGW for compatibility
-  const walletComprehensive = useComprehensiveWallet();
   const { address, balance, ethBalance, usdcBalance, btcBalance, connected, loading, email, refreshBalance, sendTransaction, sendToken, disconnect, exportPrivateKey, USDC_ADDRESS } = useAgwWallet();
   const { eth: ETH_PRICE, usdc: USDC_PRICE } = useCryptoPrice();
-  
-  // Multi-wallet support
-  const { userWallets, addWallet } = walletComprehensive;
+  const { showAuthFlow } = useDynamicContext();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedToken, setSelectedToken] = useState<'ETH' | 'USDC'>('ETH');
@@ -39,6 +36,34 @@ export const DepositPage: React.FC = () => {
   const [sendTokenType, setSendTokenType] = useState<'ETH' | 'USDC'>('ETH');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
+  
+  // Local state to track wallet connection process
+  const [isConnecting, setIsConnecting] = useState(false);
+  
+  // Stop loading once address is available OR if auth flow closes without connection
+  useEffect(() => {
+    if (address) {
+      // Immediately stop loading when address is available
+      setIsConnecting(false);
+    }
+  }, [address]);
+
+  // Stop loading if auth flow is closed but no wallet connected
+  useEffect(() => {
+    if (!showAuthFlow && isConnecting && !connected) {
+      // Auth flow closed without connecting, stop loading
+      setIsConnecting(false);
+    }
+  }, [showAuthFlow, isConnecting, connected]);
+
+  // Listen for wallet connection cancellation
+  useEffect(() => {
+    const handleCancel = () => {
+      setIsConnecting(false);
+    };
+    window.addEventListener('wallet-connect-cancelled', handleCancel);
+    return () => window.removeEventListener('wallet-connect-cancelled', handleCancel);
+  }, []);
 
   // Load transactions from localStorage and backend
   useEffect(() => {
@@ -60,7 +85,6 @@ export const DepositPage: React.FC = () => {
           setTransactions([]); // Clear if no data for this wallet
         }
       } catch (error) {
-        console.error('Failed to load local transactions:', error);
         setTransactions([]);
       }
     };
@@ -94,7 +118,6 @@ export const DepositPage: React.FC = () => {
         }
       } catch (error) {
         // Silently fail if backend is not running (dev mode)
-        console.log('Backend not available - using localStorage only');
       }
     };
 
@@ -162,12 +185,17 @@ export const DepositPage: React.FC = () => {
       
       await refreshBalance();
     } catch (error: any) {
-      console.error('Send failed:', error);
       setSendError(error.message || 'Transaction failed');
     } finally {
       setSending(false);
     }
   };
+
+  // Show loading if SDK is loading OR connecting process started but card not ready
+  const showLoading = useMemo(() => 
+    loading || (isConnecting && !address),
+    [loading, isConnecting, address]
+  );
 
   return (
     <div 
@@ -181,6 +209,10 @@ export const DepositPage: React.FC = () => {
       }}
     >
       <StarfieldBackground optimized={true} />
+      
+      {/* Loading overlay */}
+      {showLoading && <LoadingScreen />}
+      
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Header */}
         <motion.div 
@@ -188,53 +220,26 @@ export const DepositPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <FaWallet className="text-gray-300 text-3xl" />
-              <div>
-                <h1 className="text-4xl font-bold text-white">
+          <div className="flex items-center justify-center mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 p-3 rounded-2xl border border-purple-500/30 backdrop-blur-sm">
+                <FaWallet className="text-purple-400 text-3xl" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-5xl font-bold text-white mb-2 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
                   Deposit Assets
                 </h1>
-                <p className="text-gray-400 text-sm mt-1">
-                  Powered by Dynamic SDK with Multi-Wallet Support
+                <p className="text-gray-300 text-base font-medium">
+                  Powered by <span className="text-purple-400 font-semibold">Dynamic SDK</span> with Multi-Wallet Support
                 </p>
               </div>
             </div>
-            
-            {/* Network Switcher & Multi-Wallet */}
-            {connected && (
-              <div className="flex items-center space-x-3">
-                <NetworkSwitcher />
-                {userWallets.length > 1 && (
-                  <div className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg">
-                    <p className="text-xs text-gray-400">Wallets</p>
-                    <p className="text-sm font-semibold text-white">{userWallets.length}</p>
-                  </div>
-                )}
-                <button
-                  onClick={addWallet}
-                  className="flex items-center space-x-2 px-4 py-2 bg-purple-600/20 border border-purple-500/50 rounded-lg hover:bg-purple-600/30 transition-all text-purple-300"
-                  title="Add another wallet"
-                >
-                  <FaPlus />
-                  <span className="text-sm">Add Wallet</span>
-                </button>
-                <button
-                  onClick={disconnect}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-600/20 border border-red-500/50 rounded-lg hover:bg-red-600/30 transition-all text-red-300"
-                  title="Disconnect wallet"
-                >
-                  <FaTimes />
-                  <span className="text-sm">Disconnect</span>
-                </button>
-              </div>
-            )}
           </div>
           
           {/* Wallet Connection */}
           {!connected && (
             <div className="flex justify-center">
-              <WalletConnectButton />
+              <WalletConnectButton onConnecting={() => setIsConnecting(true)} />
             </div>
           )}
         </motion.div>
@@ -263,6 +268,7 @@ export const DepositPage: React.FC = () => {
                   onTokenChange={setSelectedToken}
                   onShowAssets={() => setShowAssets(!showAssets)}
                   onExportKey={exportPrivateKey}
+                  onDisconnect={disconnect}
                 />
 
                 {/* Assets Panel - Slides in from right */}
@@ -437,41 +443,47 @@ export const DepositPage: React.FC = () => {
 
               {transactions.length > 0 ? (
                 <div className="space-y-3">
-                  {transactions.slice(0, 5).map((tx) => (
-                    <a
-                      key={tx.id}
-                      href={getExplorerUrl(tx.txHash, 11124, 'tx')}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-4 bg-white/[0.03] rounded-lg border border-white/[0.08] hover:border-white/[0.12] transition-colors"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-                          <FaWallet className="text-purple-400" />
+                  {transactions.slice(0, 5).map((tx, index) => {
+                    // Ensure type and status have default values
+                    const txType = tx.type || 'deposit';
+                    const txStatus = tx.status || 'pending';
+                    
+                    return (
+                      <a
+                        key={tx.id || tx.txHash || `tx-${index}`}
+                        href={getExplorerUrl(tx.txHash, 11124, 'tx')}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-4 bg-white/[0.03] rounded-lg border border-white/[0.08] hover:border-white/[0.12] transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+                            <FaWallet className="text-purple-400" />
+                          </div>
+                          <div>
+                            <p className="text-white font-medium text-sm">
+                              {txType.charAt(0).toUpperCase() + txType.slice(1)}
+                            </p>
+                            <p className="text-gray-400 text-xs">
+                              {formatRelativeTime(tx.timestamp)}
+                            </p>
+                          </div>
                         </div>
-                        <div>
+                        <div className="text-right">
                           <p className="text-white font-medium text-sm">
-                            {tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}
+                            {formatBalanceWithSymbol(tx.amount, tx.tokenSymbol)}
                           </p>
-                          <p className="text-gray-400 text-xs">
-                            {formatRelativeTime(tx.timestamp)}
+                          <p className={`text-xs ${
+                            txStatus === 'completed' ? 'text-green-400' :
+                            txStatus === 'pending' ? 'text-yellow-400' :
+                            'text-red-400'
+                          }`}>
+                            {txStatus.charAt(0).toUpperCase() + txStatus.slice(1)}
                           </p>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white font-medium text-sm">
-                          {formatBalanceWithSymbol(tx.amount, tx.tokenSymbol)}
-                        </p>
-                        <p className={`text-xs ${
-                          tx.status === 'completed' ? 'text-green-400' :
-                          tx.status === 'pending' ? 'text-yellow-400' :
-                          'text-red-400'
-                        }`}>
-                          {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}
-                        </p>
-                      </div>
-                    </a>
-                  ))}
+                      </a>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-12">

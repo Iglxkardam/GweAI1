@@ -17,6 +17,7 @@ interface DepositCardProps {
   onTokenChange?: (token: 'ETH' | 'USDC') => void;
   onShowAssets?: () => void;
   onExportKey?: () => void;
+  onDisconnect?: () => void;
 }
 
 // USDC contract address on Base Sepolia
@@ -31,7 +32,8 @@ export const DepositCard: React.FC<DepositCardProps> = ({
   chainId = 11124,
   selectedToken = 'ETH',
   onShowAssets,
-  onExportKey
+  onExportKey,
+  onDisconnect
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
@@ -41,18 +43,6 @@ export const DepositCard: React.FC<DepositCardProps> = ({
   // For USDC, include the token contract address
   const tokenContract = selectedToken === 'USDC' ? USDC_CONTRACT_ADDRESS : undefined;
   const qrValue = generateQRValue(address, chainId, tokenContract);
-  
-  // Log for debugging
-  React.useEffect(() => {
-    console.log('🔍 QR Code Generated:', {
-      address,
-      chainId,
-      token: selectedToken,
-      tokenContract: tokenContract || 'Native ETH',
-      qrValue,
-      format: 'EIP-681 Standard'
-    });
-  }, [address, chainId, selectedToken, tokenContract, qrValue]);
 
   const handleCopyAddress = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -85,7 +75,6 @@ export const DepositCard: React.FC<DepositCardProps> = ({
           opacity: { duration: 0 }
         }}
         onClick={() => {
-          console.log('Card clicked! Flipping to:', !isFlipped ? 'BACK (QR)' : 'FRONT (Card)');
           setIsFlipped(!isFlipped);
         }}
         onMouseEnter={() => setIsHovered(true)}
@@ -157,9 +146,21 @@ export const DepositCard: React.FC<DepositCardProps> = ({
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <div className="bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-sm">
-                  <p className="text-white text-xs font-bold tracking-wider" style={{ fontSmooth: 'always' }}>TESTNET</p>
-                </div>
+                {/* Disconnect Button */}
+                {onDisconnect && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm('Are you sure you want to disconnect your wallet?')) {
+                        onDisconnect();
+                      }
+                    }}
+                    className="bg-red-500/20 hover:bg-red-500/30 px-4 py-2 rounded-lg backdrop-blur-sm transition-all duration-200 active:scale-95 border border-red-500/30"
+                    title="Disconnect Wallet"
+                  >
+                    <p className="text-red-300 text-xs font-bold tracking-wider" style={{ fontSmooth: 'always' }}>DISCONNECT</p>
+                  </button>
+                )}
                 {/* Assets Button */}
                 {onShowAssets && (
                   <button

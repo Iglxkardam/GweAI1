@@ -8,7 +8,6 @@ export { Navbar } from './Navbar';
 export { IGLLogo } from './IGLLogo';
 export { StarfieldBackground } from './StarfieldBackground';
 export { ChatHistorySidebar } from './ChatHistorySidebar';
-export { CustomCursor } from './CustomCursor';
 export { GlitchText } from './GlitchText';
 export { TypingText } from './TypingText';
 export { PerformanceChart } from './PerformanceChart';
@@ -34,3 +33,4 @@ export { Footer } from './Footer';
 
 // Loading Components
 export { SimpleLoader } from './SimpleLoader';
+export { LoadingScreen } from './LoadingScreen';

@@ -244,27 +244,6 @@ export const SwapPage: React.FC = () => {
   const currentPrice = marketData?.price || 0;
   const priceChange = marketData?.priceChange24h?.toFixed(2) || '0.00';
 
-  // Hide ALL cursors completely on swap page
-  React.useEffect(() => {
-    const style = document.createElement('style');
-    style.id = 'swap-page-cursor-style';
-    style.innerHTML = `
-      body, body * {
-        cursor: none !important;
-      }
-      .swap-page-container, .swap-page-container * {
-        cursor: none !important;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      const styleElement = document.getElementById('swap-page-cursor-style');
-      if (styleElement) {
-        document.head.removeChild(styleElement);
-      }
-    };
-  }, []);
-
   const handleSwapTokens = () => {
     const temp = fromToken;
     setFromToken(toToken);
@@ -351,7 +330,6 @@ export const SwapPage: React.FC = () => {
     <div 
       className="min-h-screen pt-20 pb-8 px-4 relative swap-page-container"
       style={{
-        cursor: 'none',
         background: '#000',
         backgroundImage: `
           radial-gradient(circle at top right, rgba(121, 68, 154, 0.13), transparent),

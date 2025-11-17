@@ -7,9 +7,10 @@
  * @see https://docs.base.org
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
-import { formatEther, parseEther, formatUnits } from 'viem';
+import { formatEther, parseEther, formatUnits, createPublicClient, http } from 'viem';
+import { baseSepolia } from 'viem/chains';
 import { storageService } from '../../../utils/indexedDBService';
 
 // Token Contract Addresses on Base Sepolia (NEWLY DEPLOYED - VERIFIED)
@@ -33,7 +34,7 @@ export const useAgwWallet = () => {
   const [btcBalance, setBtcBalance] = useState('0');
   const [loading, setLoading] = useState(false);
   
-  const address = primaryWallet?.address;
+  const address = useMemo(() => primaryWallet?.address, [primaryWallet?.address]);
   const authenticated = !!primaryWallet;
   
   // Fetch all balances (ETH, USDC, BTC)
@@ -46,79 +47,83 @@ export const useAgwWallet = () => {
     }
     
     try {
-      // Create direct RPC provider for Base Sepolia
       const rpcUrl = 'https://sepolia.base.org';
-      const provider = {
-        send: async (method: string, params: any[]) => {
-          const response = await fetch(rpcUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-          });
-          const data = await response.json();
-          return data.result;
-        },
-      };
       
-      // Fetch ETH balance
-      const ethBal = await provider.send('eth_getBalance', [primaryWallet.address, 'latest']);
-      const balanceInWei = BigInt(ethBal);
-      setEthBalance(formatEther(balanceInWei));
+      // Fetch all balances in parallel for faster loading
+      const [ethBal, usdcData, btcData] = await Promise.allSettled([
+        fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            jsonrpc: '2.0', 
+            id: 1, 
+            method: 'eth_getBalance', 
+            params: [primaryWallet.address, 'latest'] 
+          }),
+        }).then(r => r.json()).then(d => d.result),
+        
+        fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            jsonrpc: '2.0', 
+            id: 2, 
+            method: 'eth_call', 
+            params: [{
+              to: USDC_TOKEN_ADDRESS,
+              data: `0x70a08231000000000000000000000000${primaryWallet.address.slice(2)}`,
+            }, 'latest']
+          }),
+        }).then(r => r.json()).then(d => d.result),
+        
+        fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            jsonrpc: '2.0', 
+            id: 3, 
+            method: 'eth_call', 
+            params: [{
+              to: BTC_TOKEN_ADDRESS,
+              data: `0x70a08231000000000000000000000000${primaryWallet.address.slice(2)}`,
+            }, 'latest']
+          }),
+        }).then(r => r.json()).then(d => d.result),
+      ]);
       
-      // Fetch USDC balance (6 decimals)
-      try {
-        const usdcData = await provider.send('eth_call', [
-          {
-            to: USDC_TOKEN_ADDRESS,
-            data: `0x70a08231000000000000000000000000${primaryWallet.address.slice(2)}`, // balanceOf(address)
-          },
-          'latest',
-        ]);
-        // Check if response is valid before converting to BigInt
-        if (usdcData && usdcData !== '0x') {
-          const usdcBal = BigInt(usdcData);
-          setUsdcBalance(formatUnits(usdcBal, 6)); // USDC has 6 decimals
-        } else {
-          setUsdcBalance('0');
-        }
-      } catch (err) {
-        console.warn('USDC balance fetch failed:', err);
+      // Process ETH balance
+      if (ethBal.status === 'fulfilled' && ethBal.value) {
+        setEthBalance(formatEther(BigInt(ethBal.value)));
+      } else {
+        setEthBalance('0');
+      }
+      
+      // Process USDC balance
+      if (usdcData.status === 'fulfilled' && usdcData.value && usdcData.value !== '0x') {
+        setUsdcBalance(formatUnits(BigInt(usdcData.value), 6));
+      } else {
         setUsdcBalance('0');
       }
       
-      // Fetch BTC balance (8 decimals - cbBTC)
-      try {
-        const btcData = await provider.send('eth_call', [
-          {
-            to: BTC_TOKEN_ADDRESS,
-            data: `0x70a08231000000000000000000000000${primaryWallet.address.slice(2)}`, // balanceOf(address)
-          },
-          'latest',
-        ]);
-        const btcBal = BigInt(btcData);
-        setBtcBalance(formatUnits(btcBal, 8)); // cbBTC has 8 decimals
-      } catch (err) {
-        console.warn('BTC balance fetch failed:', err);
+      // Process BTC balance
+      if (btcData.status === 'fulfilled' && btcData.value && btcData.value !== '0x') {
+        setBtcBalance(formatUnits(BigInt(btcData.value), 8));
+      } else {
         setBtcBalance('0');
       }
     } catch (error) {
-      console.error('Error fetching balances:', error);
       setEthBalance('0');
       setUsdcBalance('0');
       setBtcBalance('0');
     }
   }, [primaryWallet]);
   
-  // Auto-refresh balance when wallet connects
+  // Fetch balance once when wallet connects
   useEffect(() => {
-    if (authenticated && primaryWallet) {
+    if (authenticated && address) {
       refreshBalance();
-      
-      // Refresh every 10 seconds
-      const interval = setInterval(refreshBalance, 10000);
-      return () => clearInterval(interval);
     }
-  }, [authenticated, primaryWallet, refreshBalance]);
+  }, [authenticated, address]);
 
   /**
    * Sign in - Opens Dynamic login modal (creates embedded wallet automatically)
@@ -126,10 +131,9 @@ export const useAgwWallet = () => {
   const signIn = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('🔐 Opening Dynamic login...');
       setShowAuthFlow(true);
     } catch (error) {
-      console.error('❌ Login failed:', error);
+      // Silent error handling
     } finally {
       setLoading(false);
     }
@@ -140,17 +144,20 @@ export const useAgwWallet = () => {
    */
   const signOut = useCallback(async () => {
     try {
-      console.log('👋 Logging out...');
-      
       // Clear wallet-specific data from IndexedDB and localStorage
       if (address) {
-        console.log('🗑️ Clearing wallet data for:', address);
-        await storageService.clearWallet(address);
+        // Run storage clear in background, don't wait
+        storageService.clearWallet(address).catch(() => {});
       }
       
-      await handleLogOut();
+      // Fast disconnect with 2 second timeout
+      await Promise.race([
+        handleLogOut(),
+        new Promise((resolve) => setTimeout(resolve, 2000))
+      ]);
     } catch (error) {
-      console.error('Sign out error:', error);
+      // Force reload on persistent error
+      setTimeout(() => window.location.reload(), 100);
     }
   }, [handleLogOut, address]);
   
@@ -176,47 +183,52 @@ export const useAgwWallet = () => {
       throw new Error('No wallet connected');
     }
     try {
-      console.log('📤 Sending transaction:', { to, value });
-      
       const amountInWei = parseEther(value);
       
       // Use Dynamic's proper method - getWalletClient for viem integration
       const walletClient = await (primaryWallet as any).getWalletClient?.();
       
       if (walletClient) {
-        console.log('🔍 Using wallet client');
         // Use viem's wallet client directly
         const hash = await walletClient.sendTransaction({
           to: to as `0x${string}`,
           value: amountInWei,
         });
-        console.log('✅ Transaction sent:', hash);
         
-        // Save to localStorage
-        if (primaryWallet.address) {
+        // Create public client to wait for transaction
+        const publicClient = createPublicClient({
+          chain: baseSepolia,
+          transport: http('https://sepolia.base.org'),
+        });
+        
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        
+        // Save to localStorage only after confirmation
+        if (primaryWallet.address && receipt.status === 'success') {
           const storageKey = `wallet_${primaryWallet.address.toLowerCase()}_transactions`;
           const storedTxs = localStorage.getItem(storageKey);
           const txs = storedTxs ? JSON.parse(storedTxs) : [];
           
           txs.unshift({
+            id: hash,
+            type: 'withdrawal',
             txHash: hash,
             from: primaryWallet.address,
             to,
             amount: value,
-            token: 'ETH',
+            tokenSymbol: 'ETH',
             timestamp: new Date().toISOString(),
-            status: 'pending',
+            status: 'completed',
           });
           
           localStorage.setItem(storageKey, JSON.stringify(txs));
         }
         
-        return { hash };
+        return { hash, receipt };
       }
       
       // Fallback: Use connector methods
       const connector: any = primaryWallet.connector;
-      console.log('🔍 Using connector fallback');
       
       // Try getWalletClient from connector
       const connectorWalletClient = await connector.getWalletClient?.();
@@ -226,33 +238,41 @@ export const useAgwWallet = () => {
           to: to as `0x${string}`,
           value: amountInWei,
         });
-        console.log('✅ Transaction sent via connector wallet client:', hash);
         
-        // Save to localStorage
-        if (primaryWallet.address) {
+        // Create public client to wait for transaction
+        const publicClient = createPublicClient({
+          chain: baseSepolia,
+          transport: http('https://sepolia.base.org'),
+        });
+        
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        
+        // Save to localStorage only after confirmation
+        if (primaryWallet.address && receipt.status === 'success') {
           const storageKey = `wallet_${primaryWallet.address.toLowerCase()}_transactions`;
           const storedTxs = localStorage.getItem(storageKey);
           const txs = storedTxs ? JSON.parse(storedTxs) : [];
           
           txs.unshift({
+            id: hash,
+            type: 'withdrawal',
             txHash: hash,
             from: primaryWallet.address,
             to,
             amount: value,
-            token: 'ETH',
+            tokenSymbol: 'ETH',
             timestamp: new Date().toISOString(),
-            status: 'pending',
+            status: 'completed',
           });
           
           localStorage.setItem(storageKey, JSON.stringify(txs));
         }
         
-        return { hash };
+        return { hash, receipt };
       }
       
       throw new Error('Could not get wallet client for transaction');
     } catch (error) {
-      console.error('Transaction failed:', error);
       throw error;
     }
   }, [primaryWallet]);
@@ -271,8 +291,6 @@ export const useAgwWallet = () => {
     }
     
     try {
-      console.log(`💸 Sending ${amount} tokens to ${to}...`);
-      
       // ERC20 transfer function selector: 0xa9059cbb
       // transfer(address to, uint256 amount)
       const amountBigInt = BigInt(Math.floor(Number(amount) * Math.pow(10, decimals)));
@@ -280,21 +298,25 @@ export const useAgwWallet = () => {
       const toAddressHex = to.toLowerCase().replace('0x', '').padStart(64, '0');
       const data = `0xa9059cbb${toAddressHex}${amountHex}` as `0x${string}`;
       
-      console.log(`📝 Transfer data:`, data);
-      
       // Use Dynamic's proper method - getWalletClient for viem integration
       const walletClient = await (primaryWallet as any).getWalletClient?.();
       
       if (walletClient) {
-        console.log('🔍 Using wallet client for token transfer');
         const hash = await walletClient.sendTransaction({
           to: tokenAddress as `0x${string}`,
           data,
         });
-        console.log(`✅ Token transfer submitted:`, hash);
         
-        // Save to localStorage
-        if (primaryWallet.address) {
+        // Create public client to wait for transaction
+        const publicClient = createPublicClient({
+          chain: baseSepolia,
+          transport: http('https://sepolia.base.org'),
+        });
+        
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        
+        // Save to localStorage only after confirmation
+        if (primaryWallet.address && receipt.status === 'success') {
           const storageKey = `wallet_${primaryWallet.address.toLowerCase()}_transactions`;
           const storedTxs = localStorage.getItem(storageKey);
           const txs = storedTxs ? JSON.parse(storedTxs) : [];
@@ -303,19 +325,21 @@ export const useAgwWallet = () => {
           const tokenSymbol = tokenAddress.toLowerCase() === USDC_TOKEN_ADDRESS.toLowerCase() ? 'USDC' : 'TOKEN';
           
           txs.unshift({
+            id: hash,
+            type: 'withdrawal',
             txHash: hash,
             from: primaryWallet.address,
             to,
             amount,
-            token: tokenSymbol,
+            tokenSymbol,
             timestamp: new Date().toISOString(),
-            status: 'pending',
+            status: 'completed',
           });
           
           localStorage.setItem(storageKey, JSON.stringify(txs));
         }
         
-        return { hash };
+        return { hash, receipt };
       }
       
       // Fallback: Use connector
@@ -327,10 +351,17 @@ export const useAgwWallet = () => {
           to: tokenAddress as `0x${string}`,
           data,
         });
-        console.log(`✅ Token transfer submitted via connector:`, hash);
         
-        // Save to localStorage
-        if (primaryWallet.address) {
+        // Create public client to wait for transaction
+        const publicClient = createPublicClient({
+          chain: baseSepolia,
+          transport: http('https://sepolia.base.org'),
+        });
+        
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        
+        // Save to localStorage only after confirmation
+        if (primaryWallet.address && receipt.status === 'success') {
           const storageKey = `wallet_${primaryWallet.address.toLowerCase()}_transactions`;
           const storedTxs = localStorage.getItem(storageKey);
           const txs = storedTxs ? JSON.parse(storedTxs) : [];
@@ -339,24 +370,25 @@ export const useAgwWallet = () => {
           const tokenSymbol = tokenAddress.toLowerCase() === USDC_TOKEN_ADDRESS.toLowerCase() ? 'USDC' : 'TOKEN';
           
           txs.unshift({
+            id: hash,
+            type: 'withdrawal',
             txHash: hash,
             from: primaryWallet.address,
             to,
             amount,
-            token: tokenSymbol,
+            tokenSymbol,
             timestamp: new Date().toISOString(),
-            status: 'pending',
+            status: 'completed',
           });
           
           localStorage.setItem(storageKey, JSON.stringify(txs));
         }
         
-        return { hash };
+        return { hash, receipt };
       }
       
       throw new Error('Could not get wallet client for token transfer');
     } catch (error) {
-      console.error('Token transfer failed:', error);
       throw error;
     }
   }, [primaryWallet]);
@@ -375,14 +407,11 @@ export const useAgwWallet = () => {
       // Open user profile if method exists
       if (typeof setShowDynamicUserProfile === 'function') {
         setShowDynamicUserProfile(true);
-        console.log('🔐 Opening Dynamic user profile');
       } else {
         // Fallback: show auth flow
         setShowAuthFlow(true);
-        console.log('🔐 Opening auth flow for profile access');
       }
     } catch (error) {
-      console.error('Failed to open profile:', error);
       alert('Unable to open profile. Please try clicking your wallet address in the top right.');
     }
   }, [authenticated, setShowDynamicUserProfile, setShowAuthFlow]);
@@ -399,16 +428,9 @@ export const useAgwWallet = () => {
     }
     
     try {
-      console.log('🔑 Opening Dynamic user profile for wallet export...');
-      
       // Open Dynamic user profile modal
       setShowDynamicUserProfile(true);
-      
-      console.log('✅ User profile modal opened');
-      console.log('ℹ️ Note: MFA/Passkey must be set up to export private key');
-      
     } catch (error) {
-      console.error('Failed to open export:', error);
       alert('Please click your wallet address in the top right corner to access wallet settings.');
     }
   }, [authenticated, setShowDynamicUserProfile]);

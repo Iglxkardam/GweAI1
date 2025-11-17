@@ -22,9 +22,19 @@ export const useDynamicWallet = () => {
     }
   }, [authenticated, setShowAuthFlow]);
   
-  // Disconnect wallet
+  // Disconnect wallet - optimized for faster response
   const disconnect = useCallback(async () => {
-    await handleLogOut();
+    try {
+      // Immediate UI update before async operation
+      await Promise.race([
+        handleLogOut(),
+        new Promise((resolve) => setTimeout(resolve, 2000)) // 2 second timeout
+      ]);
+    } catch (error) {
+      console.error('Disconnect error:', error);
+      // Force disconnect even if error
+      window.location.reload();
+    }
   }, [handleLogOut]);
   
   // Get balance

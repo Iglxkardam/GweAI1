@@ -6,9 +6,13 @@ import App from './App.tsx'
 import './index.css'
 import { registerServiceWorker } from './utils/serviceWorkerRegistration'
 import { initializeSecurity } from './utils/security';
+import { suppressDynamicLogs } from './utils/suppressDynamicLogs';
 
 // Initialize minimal security (like Uniswap/Hyperliquid)
 initializeSecurity();
+
+// Suppress Dynamic SDK debug logs
+suppressDynamicLogs();
 
 // Register service worker for PWA functionality
 registerServiceWorker();
@@ -18,11 +22,11 @@ const queryClient = new QueryClient();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <DynamicContextProvider
     settings={{
-      environmentId: 'e058e433-3566-4524-9f9f-5fb054a8e6bb',
+      environmentId: import.meta.env.VITE_DYNAMIC_ENVIRONMENT_ID,
       walletConnectors: [EthereumWalletConnectors],
       
-      // Authentication mode - connect and sign for better security
-      initialAuthenticationMode: 'connect-and-sign',
+      // Use connect-only for faster wallet connection (no signature required)
+      initialAuthenticationMode: 'connect-only',
       
       // Recommended wallets configuration
       recommendedWallets: [
@@ -31,9 +35,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         { walletKey: 'walletconnect' },
       ],
       
-      // Network overrides
+      // Privacy settings for faster load
+      privacyPolicyUrl: undefined,
+      termsOfServiceUrl: undefined,
+      
+      // Network overrides - completely override default networks
       overrides: {
-        evmNetworks: [
+        evmNetworks: () => [
+          // Base Sepolia
           {
             blockExplorerUrls: ['https://sepolia.basescan.org'],
             chainId: 84532,
@@ -49,40 +58,45 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             rpcUrls: ['https://sepolia.base.org'],
             vanityName: 'Base Sepolia',
           },
+          // BNB Smart Chain Testnet
+          {
+            blockExplorerUrls: ['https://testnet.bscscan.com'],
+            chainId: 97,
+            chainName: 'BSC Testnet',
+            iconUrls: ['https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png'],
+            name: 'Binance Smart Chain Testnet',
+            nativeCurrency: {
+              decimals: 18,
+              name: 'tBNB',
+              symbol: 'tBNB',
+            },
+            networkId: 97,
+            rpcUrls: ['https://data-seed-prebsc-1-s1.bnbchain.org:8545', 'https://bsc-testnet.publicnode.com'],
+            vanityName: 'BSC Testnet',
+          },
         ],
       },
       
-      // Event listeners for wallet actions
+      // Event listeners for wallet actions - optimized
       events: {
         onAuthSuccess: (args) => {
-          console.log('✅ Auth success:', args);
-          // Store user data or trigger analytics
-          if (args.user) {
-            localStorage.setItem('dynamic_user_id', args.user.userId || '');
+          // Minimal storage for faster response
+          if (args.user?.userId) {
+            localStorage.setItem('dynamic_user_id', args.user.userId);
           }
         },
         
-        onAuthFailure: (error) => {
-          console.error('❌ Auth failed:', error);
-          // Show error notification or retry logic
+        onAuthFailure: () => {
+          // Silent error handling
         },
         
         onLogout: () => {
-          console.log('👋 User logged out');
-          // Clear user data
+          // Fast cleanup
           localStorage.removeItem('dynamic_user_id');
         },
         
-        onAuthFlowOpen: () => {
-          console.log('🔐 Auth flow opened');
-        },
-        
-        onAuthFlowClose: () => {
-          console.log('🔒 Auth flow closed');
-        },
-        
-        onEmbeddedWalletCreated: (wallet: any) => {
-          console.log('🎉 Embedded wallet created:', wallet);
+        onEmbeddedWalletCreated: () => {
+          // Wallet created successfully
         },
       },
     }}

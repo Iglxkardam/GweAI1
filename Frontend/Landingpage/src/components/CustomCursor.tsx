@@ -6,12 +6,17 @@ interface CustomCursorProps {
 
 export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => {
   const cursorRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true); // Start visible
   const [isClicked, setIsClicked] = useState(false);
   const [isDynamicOpen, setIsDynamicOpen] = useState(false);
   const mouseRef = useRef({ x: 0, y: 0 });
   const oldPosRef = useRef({ x: 0, y: 0 });
   const prevAngleRef = useRef(0);
+  
+  // Unique IDs for gradients to avoid conflicts
+  const gradientId = `cursorGradient-${theme}`;
+  const lightningId = `lightningGradient-${theme}`;
+  const glowId = `cursorGlow-${theme}`;
 
   // Theme colors
   const themeColors = {
@@ -30,18 +35,48 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
   const colors = themeColors[theme];
 
   useEffect(() => {
+    console.log('🎨 CustomCursor mounted, theme:', theme);
+    
     // Monitor for Dynamic modal open/close
     const checkDynamicModal = () => {
       const hasDynamicModal = document.querySelector('[role="dialog"]') !== null ||
                              document.querySelector('[data-dynamic-modal]') !== null ||
-                             document.querySelector('[class*="dynamic-widget"]') !== null ||
+                             document.querySelector('[class*="dynamic"]') !== null ||
                              document.querySelector('iframe[src*="dynamic"]') !== null;
+      
+      const wasOpen = isDynamicOpen;
       setIsDynamicOpen(hasDynamicModal);
+      
+      // If modal just closed, force cursor to reappear
+      if (wasOpen && !hasDynamicModal) {
+        console.log('🎯 Dynamic modal closed - restoring cursor');
+        setTimeout(() => {
+          setIsVisible(true);
+          if (cursorRef.current) {
+            cursorRef.current.style.opacity = '1';
+            cursorRef.current.style.display = 'block';
+          }
+        }, 100);
+      }
+      
       return hasDynamicModal;
     };
 
     // Initial check
     checkDynamicModal();
+    
+    // Show cursor immediately on mount and set initial position to center of screen
+    setIsVisible(true);
+    const initialX = window.innerWidth / 2;
+    const initialY = window.innerHeight / 2;
+    mouseRef.current = { x: initialX, y: initialY };
+    oldPosRef.current = { x: initialX, y: initialY };
+    
+    if (cursorRef.current) {
+      cursorRef.current.style.left = `${initialX}px`;
+      cursorRef.current.style.top = `${initialY}px`;
+      cursorRef.current.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+    }
 
     // Watch for DOM changes
     const observer = new MutationObserver(() => {
@@ -82,66 +117,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
       return false;
     };
 
-    // Hide default cursor only on non-Dynamic elements
-    const style = document.createElement('style');
-    style.id = 'custom-cursor-style';
-    style.innerHTML = `
-      /* Hide cursor by default */
-      html, body {
-        cursor: none !important;
-      }
-      
-      /* Hide cursor on all elements EXCEPT Dynamic */
-      *:not([class*="dynamic"]):not([id*="dynamic"]):not([role="dialog"]):not(iframe) {
-        cursor: none !important;
-      }
-      
-      /* FORCE show cursor on Dynamic elements - HIGHEST PRIORITY */
-      [class*="dynamic"],
-      [class*="dynamic"] *,
-      [id*="dynamic"],
-      [id*="dynamic"] *,
-      [role="dialog"],
-      [role="dialog"] *,
-      iframe,
-      iframe *,
-      [data-dynamic-modal],
-      [data-dynamic-modal] *,
-      div[class*="Dynamic"],
-      div[id*="Dynamic"] {
-        cursor: auto !important;
-      }
-      
-      /* Interactive elements in Dynamic */
-      [class*="dynamic"] button,
-      [class*="dynamic"] a,
-      [id*="dynamic"] button,
-      [id*="dynamic"] a,
-      [role="dialog"] button,
-      [role="dialog"] a,
-      [data-dynamic-modal] button,
-      [data-dynamic-modal] a {
-        cursor: pointer !important;
-      }
-      
-      [class*="dynamic"] input,
-      [class*="dynamic"] textarea,
-      [id*="dynamic"] input,
-      [id*="dynamic"] textarea,
-      [role="dialog"] input,
-      [role="dialog"] textarea,
-      [data-dynamic-modal] input,
-      [data-dynamic-modal] textarea {
-        cursor: text !important;
-      }
-    `;
-    // Remove existing style if present
-    const existingStyle = document.getElementById('custom-cursor-style');
-    if (existingStyle) {
-      existingStyle.remove();
-    }
-    document.head.appendChild(style);
-
+    // No need for custom cursor style injection - handled by index.css globally
     const calculateAngle = (
       prevPos: { x: number; y: number },
       newPos: { x: number; y: number }
@@ -164,6 +140,11 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
         cursorRef.current.style.left = `${newPos.x}px`;
         cursorRef.current.style.top = `${newPos.y}px`;
         cursorRef.current.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+        
+        // Debug log (remove after testing)
+        if (Math.random() < 0.01) { // Log 1% of the time to avoid spam
+          console.log('🎯 Cursor position:', newPos, 'visible:', isVisible);
+        }
       }
     };
 
@@ -176,21 +157,18 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
       // Hide custom cursor when over Dynamic elements
       if (overDynamic) {
         setIsVisible(false);
-        // Also restore body cursor temporarily
         document.body.style.cursor = 'auto';
         return;
       } else {
-        // Hide body cursor when not over Dynamic
+        // Show custom cursor
+        if (!isVisible) {
+          setIsVisible(true);
+        }
         document.body.style.cursor = 'none';
       }
       
       // Use clientX/clientY for fixed positioning (viewport coordinates)
       mouseRef.current = { x: e.clientX, y: e.clientY };
-      
-      // Show cursor on first move
-      if (!isVisible) {
-        setIsVisible(true);
-      }
       
       // Throttle with RAF for 60fps max
       if (rafId === null) {
@@ -217,9 +195,24 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
     const handleMouseLeave = () => {
       setIsVisible(false);
     };
+    
+    // Force restore cursor visibility on any click (helps after modal close)
+    const handleClick = () => {
+      if (!isDynamicOpen) {
+        setTimeout(() => {
+          setIsVisible(true);
+          if (cursorRef.current) {
+            cursorRef.current.style.opacity = '1';
+            cursorRef.current.style.display = 'block';
+          }
+          document.body.style.cursor = 'none';
+        }, 50);
+      }
+    };
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     window.addEventListener('mousedown', handleMouseDown, { passive: true });
+    window.addEventListener('click', handleClick, { passive: true });
     document.addEventListener('mouseenter', handleMouseEnter, { passive: true });
     document.addEventListener('mouseleave', handleMouseLeave, { passive: true });
 
@@ -232,37 +225,26 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
       // Disconnect observer
       observer.disconnect();
       
-      // Remove custom cursor style
-      const existingStyle = document.getElementById('custom-cursor-style');
-      if (existingStyle) {
-        existingStyle.remove();
-      }
-      
       // Restore default cursor
       document.body.style.cursor = '';
       document.documentElement.style.cursor = '';
       
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('click', handleClick);
       document.removeEventListener('mouseenter', handleMouseEnter);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [isVisible]);
+  }, [isVisible, isDynamicOpen]);
 
   // Effect to handle Dynamic modal state
   useEffect(() => {
     if (isDynamicOpen) {
-      // Dynamic modal is open - restore all cursors
+      // Dynamic modal is open - restore cursor for modal
       document.body.style.cursor = 'auto';
       document.documentElement.style.cursor = 'auto';
-      
-      // Temporarily disable custom cursor styles
-      const style = document.getElementById('custom-cursor-style');
-      if (style) {
-        style.remove();
-      }
     } else {
-      // Dynamic modal is closed - reapply custom cursor
+      // Dynamic modal is closed - use custom cursor
       document.body.style.cursor = 'none';
       document.documentElement.style.cursor = 'none';
     }
@@ -276,13 +258,19 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
   return (
     <div
       ref={cursorRef}
-      className={`cursor fixed pointer-events-none z-[9999] transition-opacity duration-300 ${
-        isVisible ? 'opacity-100' : 'opacity-0'
-      }`}
+      className="cursor-wrapper"
       style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
         width: '40px',
         height: '40px',
+        pointerEvents: 'none',
+        zIndex: 999999,
+        opacity: isVisible ? 1 : 0,
+        display: isVisible ? 'block' : 'none',
         willChange: 'transform',
+        transition: 'opacity 0.2s',
       }}
     >
       {/* Click effect - Lightning rings */}
@@ -300,7 +288,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
                 cx="20"
                 cy="20"
                 r="18"
-                stroke="url(#lightningGradient)"
+                stroke={`url(#${lightningId})`}
                 strokeWidth="3"
                 fill="none"
                 opacity="0.8"
@@ -319,7 +307,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
                 cx="20"
                 cy="20"
                 r="15"
-                stroke="url(#lightningGradient)"
+                stroke={`url(#${lightningId})`}
                 strokeWidth="2"
                 fill="none"
                 opacity="0.6"
@@ -337,14 +325,26 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className={`transition-transform duration-150 ${isClicked ? 'scale-90' : 'scale-100'}`}
+        style={{ opacity: 1, display: 'block' }}
       >
-        {/* Outer glow */}
+        {/* Visible outer circle for debugging */}
+        <circle
+          cx="20"
+          cy="20"
+          r="19"
+          stroke="#8B5CF6"
+          strokeWidth="2"
+          fill="none"
+          opacity="0.8"
+        />
+        
+        {/* Outer glow - more visible */}
         <circle
           cx="20"
           cy="20"
           r="18"
-          fill="url(#cursorGlow)"
-          opacity={isClicked ? "0.8" : "0.3"}
+          fill={`url(#${glowId})`}
+          opacity={isClicked ? "0.9" : "0.7"}
           className="transition-opacity duration-150"
         />
         
@@ -355,7 +355,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
               cx="20"
               cy="20"
               r="15"
-              stroke="url(#lightningGradient)"
+              stroke={`url(#${lightningId})`}
               strokeWidth="2"
               fill="none"
               opacity="0.9"
@@ -364,7 +364,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
               cx="20"
               cy="20"
               r="12"
-              stroke="url(#lightningGradient)"
+              stroke={`url(#${lightningId})`}
               strokeWidth="1.5"
               fill="none"
               opacity="0.7"
@@ -372,38 +372,40 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
           </>
         )}
         
-        {/* Main cursor shape - arrow pointer */}
+        {/* Main cursor shape - arrow pointer with thicker stroke */}
         <path
           d="M20 5 L20 35 M20 5 L15 12 M20 5 L25 12"
-          stroke="url(#cursorGradient)"
-          strokeWidth="2.5"
+          stroke="#8B5CF6"
+          strokeWidth="4"
           strokeLinecap="round"
           strokeLinejoin="round"
+          opacity="1"
         />
         
-        {/* Center dot */}
+        {/* Center dot - bigger and more visible with solid color */}
         <circle
           cx="20"
           cy="20"
-          r={isClicked ? "4" : "3"}
-          fill="url(#cursorGradient)"
+          r={isClicked ? "6" : "5"}
+          fill="#8B5CF6"
           className="transition-all duration-150"
+          opacity="1"
         />
         
-        {/* Gradient definitions */}
+        {/* Gradient definitions with unique IDs */}
         <defs>
-          <linearGradient id="cursorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={colors.gradient[0]} />
             <stop offset="50%" stopColor={colors.gradient[1]} />
             <stop offset="100%" stopColor={colors.gradient[2]} />
           </linearGradient>
-          <linearGradient id="lightningGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={lightningId} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={colors.lightning[0]} />
             <stop offset="50%" stopColor={colors.lightning[1]} />
             <stop offset="100%" stopColor={colors.lightning[2]} />
           </linearGradient>
-          <radialGradient id="cursorGlow">
-            <stop offset="0%" stopColor={colors.glow} stopOpacity="0.6" />
+          <radialGradient id={glowId}>
+            <stop offset="0%" stopColor={colors.glow} stopOpacity="0.8" />
             <stop offset="100%" stopColor={colors.gradient[2]} stopOpacity="0" />
           </radialGradient>
         </defs>

@@ -13,7 +13,6 @@ import { FAQ } from './components/FAQ';
 import { CTA } from './components/CTA';
 import { Footer } from './components/Footer';
 import { AppNavbar } from './layout/AppNavbar';
-import { CustomCursor } from './components/CustomCursor';
 import { BackgroundMusic } from './components/BackgroundMusic';
 import { useWalletStorageManager } from './hooks/useWalletStorageManager';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -100,26 +99,27 @@ const App = () => {
               {currentPage === 'vault' && <VaultPage />}
               {currentPage === 'subscription' && <SubscriptionPage />}
             </div>
-            <CustomCursor theme="app" />
           </>
         );
       case 'landing':
       default:
         return (
-          <div className="min-h-screen bg-black">
-            <Navbar />
-            <Hero onStartInvesting={() => setCurrentPage('dca')} />
-            <Problem />
-            <Solution />
-            <HowItWorks />
-            <Features />
-            <TechStack />
-            <Comparison />
-            <SocialProof />
-            <FAQ />
-            <CTA />
-            <Footer />
-          </div>
+          <>
+            <div className="min-h-screen bg-black">
+              <Navbar />
+              <Hero onStartInvesting={() => setCurrentPage('dca')} />
+              <Problem />
+              <Solution />
+              <HowItWorks />
+              <Features />
+              <TechStack />
+              <Comparison />
+              <SocialProof />
+              <FAQ />
+              <CTA />
+              <Footer />
+            </div>
+          </>
         );
     }
   };

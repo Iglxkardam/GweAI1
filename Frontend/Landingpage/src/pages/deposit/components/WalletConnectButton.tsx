@@ -11,19 +11,27 @@ import { useAgwWallet } from '../hooks/useAgwWallet';
 
 interface WalletConnectButtonProps {
   onConnect?: (address: string) => void;
+  onConnecting?: () => void;
 }
 
-export const WalletConnectButton: React.FC<WalletConnectButtonProps> = ({ onConnect }) => {
+export const WalletConnectButton: React.FC<WalletConnectButtonProps> = ({ onConnect, onConnecting }) => {
   const { connected, address, loading, signIn, signOut } = useAgwWallet();
 
   const handleConnect = async () => {
     try {
+      if (onConnecting) {
+        onConnecting();
+      }
       await signIn();
       if (onConnect && address) {
         onConnect(address);
       }
     } catch (err) {
-      console.error('Login failed:', err);
+      // If user cancels or error occurs, stop connecting state
+      if (onConnecting) {
+        // Reset connecting state in parent by calling with false
+        window.dispatchEvent(new CustomEvent('wallet-connect-cancelled'));
+      }
     }
   };
 

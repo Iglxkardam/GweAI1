@@ -28,8 +28,8 @@ async function main() {
   console.log("⏳ Waiting for 3 confirmations...");
   await usdc.deploymentTransaction().wait(3);
 
-  // Set treasury address (use deployer for now, change in production)
-  const treasuryAddress = deployer.address;
+  // Set treasury address - 0xdac363d23f911066467a05fc2405b0f76ff17cdb
+  const treasuryAddress = "0xdac363d23f911066467a05fc2405b0f76ff17cdb";
   console.log("💎 Treasury address:", treasuryAddress);
 
   // Deploy SubscriptionPlan
