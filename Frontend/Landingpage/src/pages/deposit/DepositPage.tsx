@@ -19,12 +19,15 @@ import { DepositCard } from './components/DepositCard';
 import { formatRelativeTime, formatBalanceWithSymbol, getExplorerUrl } from './utils/format';
 import type { Transaction } from './types/wallet.types';
 import { isAddress } from 'viem';
-import { useCryptoPrice } from '../../hooks/useCryptoPrice';
+import { useGlobalPrices } from '../../context/PriceContext';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 
 export const DepositPage: React.FC = () => {
   const { address, balance, ethBalance, usdcBalance, btcBalance, connected, loading, email, refreshBalance, sendTransaction, sendToken, disconnect, exportPrivateKey, USDC_ADDRESS } = useAgwWallet();
-  const { eth: ETH_PRICE, usdc: USDC_PRICE } = useCryptoPrice();
+  const { prices } = useGlobalPrices();
+  const ETH_PRICE = prices.eth || 0;
+  const USDC_PRICE = 1;
+  const BTC_PRICE = prices.btc || 0;
   const { showAuthFlow } = useDynamicContext();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -65,38 +68,48 @@ export const DepositPage: React.FC = () => {
     return () => window.removeEventListener('wallet-connect-cancelled', handleCancel);
   }, []);
 
-  // Load transactions from localStorage and backend
+  // Load transactions from localStorage and backend - Optimized with proper cleanup
   useEffect(() => {
     if (!address) {
-      // Clear transactions when wallet disconnects
       setTransactions([]);
       return;
     }
+
+    let isMounted = true;
 
     // Load wallet-specific transactions from localStorage immediately
     const loadLocalTransactions = () => {
       try {
         const storageKey = `wallet_${address.toLowerCase()}_transactions`;
         const storedTxs = localStorage.getItem(storageKey);
-        if (storedTxs) {
+        if (storedTxs && isMounted) {
           const txs = JSON.parse(storedTxs);
           setTransactions(txs);
-        } else {
-          setTransactions([]); // Clear if no data for this wallet
+        } else if (isMounted) {
+          setTransactions([]);
         }
       } catch (error) {
-        setTransactions([]);
+        if (isMounted) setTransactions([]);
       }
     };
 
     loadLocalTransactions();
 
     const fetchTransactions = async () => {
+      if (!isMounted) return;
+      
       try {
         const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-        const response = await fetch(`${apiUrl}/api/transactions/${address}`);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
         
-        if (response.ok) {
+        const response = await fetch(`${apiUrl}/api/transactions/${address}`, {
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeout);
+        
+        if (response.ok && isMounted) {
           const data = await response.json();
           const backendTxs = data.transactions || [];
           
@@ -111,20 +124,27 @@ export const DepositPage: React.FC = () => {
             new Map(allTxs.map(tx => [tx.txHash, tx])).values()
           );
           
-          setTransactions(uniqueTxs);
-          
-          // Update localStorage with merged data
-          localStorage.setItem(storageKey, JSON.stringify(uniqueTxs));
+          if (isMounted) {
+            setTransactions(uniqueTxs);
+            localStorage.setItem(storageKey, JSON.stringify(uniqueTxs));
+          }
         }
       } catch (error) {
-        // Silently fail if backend is not running (dev mode)
+        // Silently fail if backend is not running or timeout
       }
     };
 
     fetchTransactions();
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchTransactions, 30000);
-    return () => clearInterval(interval);
+    
+    // Poll for updates every 60 seconds (optimized from 30s for scalability)
+    const interval = setInterval(() => {
+      if (isMounted) fetchTransactions();
+    }, 60000);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [address]);
 
   const handleRefresh = async () => {
@@ -382,8 +402,8 @@ export const DepositPage: React.FC = () => {
                               <span className="text-xl text-white brightness-150">₿</span>
                             </div>
                             <div>
-                              <p className="text-white font-semibold text-lg">cbBTC</p>
-                              <p className="text-gray-400 text-xs">Coinbase Bitcoin</p>
+                              <p className="text-white font-semibold text-lg">BTC</p>
+                              <p className="text-gray-400 text-xs">Bitcoin</p>
                             </div>
                           </div>
                         </div>
@@ -392,7 +412,7 @@ export const DepositPage: React.FC = () => {
                             {parseFloat(btcBalance).toFixed(6)}
                           </p>
                           <p className="text-sm text-gray-400 mt-1">
-                            ≈ ${(parseFloat(btcBalance) * 45000).toFixed(2)} USD
+                            ≈ ${(parseFloat(btcBalance) * BTC_PRICE).toFixed(2)} USD
                           </p>
                           <button
                             onClick={(e) => {
@@ -410,7 +430,7 @@ export const DepositPage: React.FC = () => {
                       <div className="pt-4 border-t border-white/[0.08]">
                         <p className="text-gray-400 text-sm mb-1">Total Portfolio Value</p>
                         <p className="text-3xl font-bold text-white">
-                          ${((parseFloat(ethBalance) * ETH_PRICE) + (parseFloat(usdcBalance) * USDC_PRICE) + (parseFloat(btcBalance) * 45000)).toFixed(2)}
+                          ${((parseFloat(ethBalance) * ETH_PRICE) + (parseFloat(usdcBalance) * USDC_PRICE) + (parseFloat(btcBalance) * BTC_PRICE)).toFixed(2)}
                         </p>
                       </div>
                     </div>

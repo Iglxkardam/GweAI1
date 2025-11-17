@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, memo } from 'react';
+﻿import { useState, useEffect, memo, lazy, Suspense } from 'react';
 import { DynamicUserProfile } from '@dynamic-labs/sdk-react-core';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -14,21 +14,24 @@ import { CTA } from './components/CTA';
 import { Footer } from './components/Footer';
 import { AppNavbar } from './layout/AppNavbar';
 import { BackgroundMusic } from './components/BackgroundMusic';
+import { LoadingScreen } from './components/LoadingScreen';
 import { useWalletStorageManager } from './hooks/useWalletStorageManager';
 import ErrorBoundary from './components/ErrorBoundary';
+import { PriceProvider } from './context/PriceContext';
 
-// Import all pages directly - no lazy loading for instant page switching
-import { DCAPage } from './pages/dca/DCAPage';
-import { MarketListPage, TradingPage } from './pages/market';
-import { PortfolioPage } from './pages/portfolio/PortfolioPage';
-import { TransactionPage } from './pages/transaction/TransactionPage';
-import { SwapPage } from './pages/swap/SwapPage';
-import { DepositPage } from './pages/deposit/DepositPage';
-import { VaultPage } from './pages/vault/VaultPage';
-import { SubscriptionPage } from './pages/subscription/SubscriptionPage';
+// Lazy load pages for better initial load performance (scalable for 100k+ users)
+const DCAPage = lazy(() => import('./pages/dca/DCAPage').then(m => ({ default: m.DCAPage })));
+const MarketListPage = lazy(() => import('./pages/market').then(m => ({ default: m.MarketListPage })));
+const TradingPage = lazy(() => import('./pages/market').then(m => ({ default: m.TradingPage })));
+const PortfolioPage = lazy(() => import('./pages/portfolio/PortfolioPage').then(m => ({ default: m.PortfolioPage })));
+const TransactionPage = lazy(() => import('./pages/transaction/TransactionPage').then(m => ({ default: m.TransactionPage })));
+const SwapPage = lazy(() => import('./pages/swap/SwapPage').then(m => ({ default: m.SwapPage })));
+const DepositPage = lazy(() => import('./pages/deposit/DepositPage').then(m => ({ default: m.DepositPage })));
+const VaultPage = lazy(() => import('./pages/vault/VaultPage').then(m => ({ default: m.VaultPage })));
+const SubscriptionPage = lazy(() => import('./pages/subscription/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
 
 type Page = 'landing' | 'dca' | 'market' | 'portfolio' | 'transactions' | 'swap' | 'deposit' | 'vault' | 'subscription';
-type TradingPair = 'BTC/USDC' | 'ETH/USDC' | 'BNB/USDC' | 'SOL/USDC' | 'XRP/USDC' | 'ADA/USDC' | 'DOGE/USDC' | 'MATIC/USDC' | 'DOT/USDC' | 'AVAX/USDC';
+type TradingPair = 'BTC/USDC' | 'ETH/USDC' | 'XRP/USDC' | 'BNB/USDC' | 'SOL/USDC' | 'DOGE/USDC' | 'ADA/USDC' | 'TRX/USDC' | 'AVAX/USDC' | 'TON/USDC';
 
 const App = () => {
   // Initialize wallet storage manager (handles wallet-specific data isolation)
@@ -80,25 +83,27 @@ const App = () => {
               setCurrentPage={setCurrentPage}
               sidebarOpen={isSidebarOpen}
             />
-            <div style={{ position: 'relative', minHeight: '100vh' }}>
-              {currentPage === 'dca' && <DCAPage />}
-              {currentPage === 'market' && (
-                selectedTradingPair ? (
-                  <TradingPage 
-                    pair={selectedTradingPair} 
-                    onBack={() => setSelectedTradingPair(null)} 
-                  />
-                ) : (
-                  <MarketListPage onSelectPair={setSelectedTradingPair} />
-                )
-              )}
-              {currentPage === 'portfolio' && <PortfolioPage />}
-              {currentPage === 'transactions' && <TransactionPage />}
-              {currentPage === 'swap' && <SwapPage />}
-              {currentPage === 'deposit' && <DepositPage />}
-              {currentPage === 'vault' && <VaultPage />}
-              {currentPage === 'subscription' && <SubscriptionPage />}
-            </div>
+            <Suspense fallback={<LoadingScreen />}>
+              <div style={{ position: 'relative', minHeight: '100vh' }}>
+                {currentPage === 'dca' && <DCAPage />}
+                {currentPage === 'market' && (
+                  selectedTradingPair ? (
+                    <TradingPage 
+                      pair={selectedTradingPair} 
+                      onBack={() => setSelectedTradingPair(null)} 
+                    />
+                  ) : (
+                    <MarketListPage onSelectPair={setSelectedTradingPair} />
+                  )
+                )}
+                {currentPage === 'portfolio' && <PortfolioPage />}
+                {currentPage === 'transactions' && <TransactionPage />}
+                {currentPage === 'swap' && <SwapPage />}
+                {currentPage === 'deposit' && <DepositPage />}
+                {currentPage === 'vault' && <VaultPage />}
+                {currentPage === 'subscription' && <SubscriptionPage />}
+              </div>
+            </Suspense>
           </>
         );
       case 'landing':
@@ -125,12 +130,14 @@ const App = () => {
   };
 
   return (
-    <ErrorBoundary>
-      {renderPage()}
-      <BackgroundMusic />
-      {/* Dynamic User Profile - Required for wallet export functionality */}
-      <DynamicUserProfile variant="modal" />
-    </ErrorBoundary>
+    <PriceProvider>
+      <ErrorBoundary>
+        {renderPage()}
+        <BackgroundMusic />
+        {/* Dynamic User Profile - Required for wallet export functionality */}
+        <DynamicUserProfile variant="modal" />
+      </ErrorBoundary>
+    </PriceProvider>
   );
 };
 

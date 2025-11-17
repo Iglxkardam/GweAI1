@@ -3,20 +3,25 @@ import { motion } from 'framer-motion';
 import { FaWallet, FaChartLine, FaArrowUp, FaCog } from 'react-icons/fa';
 import { StarfieldBackground, PerformanceChart } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
-import { useCryptoPrice } from '../../hooks/useCryptoPrice';
+import { useGlobalPrices } from '../../context/PriceContext';
 
 export const PortfolioPage: React.FC = () => {
-  const { ethBalance, usdcBalance, connected, address } = useAgwWallet();
-  const { eth: ETH_PRICE, usdc: USDC_PRICE } = useCryptoPrice();
+  const { ethBalance, usdcBalance, btcBalance, connected, address } = useAgwWallet();
+  const { prices } = useGlobalPrices();
+  const ETH_PRICE = prices.eth || 0;
+  const USDC_PRICE = 1;
+  const BTC_PRICE = prices.btc || 0;
   
   const totalValue = useMemo(() => {
     const ethValue = parseFloat(ethBalance) * ETH_PRICE;
     const usdcValue = parseFloat(usdcBalance) * USDC_PRICE;
-    return ethValue + usdcValue;
-  }, [ethBalance, usdcBalance]);
+    const btcValue = parseFloat(btcBalance) * BTC_PRICE;
+    return ethValue + usdcValue + btcValue;
+  }, [ethBalance, usdcBalance, btcBalance, ETH_PRICE, USDC_PRICE, BTC_PRICE]);
 
-  const ethValue = useMemo(() => parseFloat(ethBalance) * ETH_PRICE, [ethBalance]);
-  const usdcValue = useMemo(() => parseFloat(usdcBalance) * USDC_PRICE, [usdcBalance]);
+  const ethValue = useMemo(() => parseFloat(ethBalance) * ETH_PRICE, [ethBalance, ETH_PRICE]);
+  const usdcValue = useMemo(() => parseFloat(usdcBalance) * USDC_PRICE, [usdcBalance, USDC_PRICE]);
+  const btcValue = useMemo(() => parseFloat(btcBalance) * BTC_PRICE, [btcBalance, BTC_PRICE]);
 
   return (
     <div 
@@ -69,7 +74,7 @@ export const PortfolioPage: React.FC = () => {
               {connected ? `$${totalValue.toFixed(2)}` : '$0.00'}
             </p>
             <p className="text-xs sm:text-sm text-gray-400 font-medium">
-              {connected ? `${parseFloat(ethBalance).toFixed(4)} ETH + ${parseFloat(usdcBalance).toFixed(2)} USDC` : 'Connect wallet to view'}
+              {connected ? `${parseFloat(ethBalance).toFixed(4)} ETH + ${parseFloat(usdcBalance).toFixed(2)} USDC + ${parseFloat(btcBalance).toFixed(6)} BTC` : 'Connect wallet to view'}
             </p>
           </div>
 
@@ -150,11 +155,30 @@ export const PortfolioPage: React.FC = () => {
                   </div>
                 )}
 
-                {parseFloat(ethBalance) === 0 && parseFloat(usdcBalance) === 0 && (
+                {/* Bitcoin */}
+                {parseFloat(btcBalance) > 0 && (
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-white/[0.03] rounded-lg sm:rounded-xl border border-white/[0.08] hover:border-white/[0.12] transition-all duration-200">
+                    <div className="flex items-center space-x-3 sm:space-x-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-400/20 to-orange-500/20 border border-orange-500/20 rounded-full flex items-center justify-center">
+                        <span className="text-orange-400 font-bold text-base sm:text-lg">₿</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white text-sm sm:text-base">Bitcoin</h3>
+                        <p className="text-xs sm:text-sm text-gray-400">{parseFloat(btcBalance).toFixed(6)} BTC</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-white text-sm sm:text-base">${btcValue.toFixed(2)}</p>
+                      <p className="text-xs sm:text-sm text-gray-400">@ ${BTC_PRICE.toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+
+                {parseFloat(ethBalance) === 0 && parseFloat(usdcBalance) === 0 && parseFloat(btcBalance) === 0 && (
                   <div className="text-center py-8">
                     <FaWallet className="text-4xl text-gray-500 mx-auto mb-3" />
                     <p className="text-gray-400">No assets in your wallet</p>
-                    <p className="text-sm text-gray-500 mt-2">Deposit ETH or USDC to get started</p>
+                    <p className="text-sm text-gray-500 mt-2">Deposit ETH, USDC or BTC to get started</p>
                   </div>
                 )}
               </div>

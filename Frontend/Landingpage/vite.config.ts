@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,6 +16,15 @@ export default defineConfig({
       },
     }),
   ],
+  // Critical: Resolve React to single instance to prevent hook errors
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
+    alias: {
+      react: path.resolve('./node_modules/react'),
+      'react-dom': path.resolve('./node_modules/react-dom'),
+      'react/jsx-runtime': path.resolve('./node_modules/react/jsx-runtime'),
+    },
+  },
   build: {
     // Target modern browsers for smaller bundle
     target: 'esnext',
@@ -22,12 +32,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Separate vendor chunks for better caching
-          'react-vendor': ['react', 'react-dom'],
+          // Separate vendor chunks for better caching (optimized for 100k+ users)
+          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
           'animation-vendor': ['framer-motion'],
           'three-vendor': ['three'],
-          'web3-vendor': ['ethers', 'viem', 'wagmi'],
+          'web3-vendor': ['viem', 'wagmi'],
+          'dynamic-vendor': ['@dynamic-labs/sdk-react-core', '@dynamic-labs/ethereum'],
           'query-vendor': ['@tanstack/react-query'],
+          'icons-vendor': ['react-icons'],
+          'utils-vendor': ['axios', 'groq-sdk'],
         },
         // Optimize asset naming
         assetFileNames: 'assets/[name]-[hash][extname]',
@@ -41,21 +54,26 @@ export default defineConfig({
       compress: {
         drop_console: true, // Remove console.logs in production
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info'], // Remove specific console methods
+        pure_funcs: ['console.log', 'console.info', 'console.debug'], // Remove specific console methods
+        passes: 2, // Run compression twice for smaller output
       },
-      mangle: true,
+      mangle: {
+        safari10: true, // Better Safari compatibility
+      },
       format: {
         comments: false, // Remove comments
       },
     },
-    // Optimize chunk size
-    chunkSizeWarningLimit: 1000,
+    // Optimize chunk size (increased for better code splitting)
+    chunkSizeWarningLimit: 800,
     // Enable CSS code splitting
     cssCodeSplit: true,
     // Source maps for production debugging (disable for smaller build)
     sourcemap: false,
     // Report compressed size
     reportCompressedSize: true,
+    // Optimize asset inlining
+    assetsInlineLimit: 4096, // Inline assets < 4kb
   },
   // Optimize dependencies
   optimizeDeps: {

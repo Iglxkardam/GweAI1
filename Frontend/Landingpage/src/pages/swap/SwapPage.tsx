@@ -31,7 +31,7 @@ interface ChartPoint {
 
 export const SwapPage: React.FC = () => {
   // Get real wallet balances from AGW
-  const { ethBalance, usdcBalance, connected, address } = useAgwWallet();
+  const { ethBalance, usdcBalance, btcBalance, connected, address } = useAgwWallet();
   
   // Create tokens array with real balances (only when connected, otherwise show 0)
   const tokens: Token[] = [
@@ -53,7 +53,7 @@ export const SwapPage: React.FC = () => {
       symbol: 'BTC', 
       name: 'Bitcoin', 
       icon: '₿', 
-      balance: '0.0000', 
+      balance: connected ? parseFloat(btcBalance).toFixed(6) : '0.000000', 
       coinGeckoId: 'bitcoin' 
     },
     { 
@@ -274,7 +274,7 @@ export const SwapPage: React.FC = () => {
         symbol: 'BTC', 
         name: 'Bitcoin', 
         icon: '₿', 
-        balance: '0.0000', 
+        balance: connected ? parseFloat(btcBalance).toFixed(6) : '0.000000', 
         coinGeckoId: 'bitcoin' 
       },
       { 
@@ -289,7 +289,7 @@ export const SwapPage: React.FC = () => {
     // Update fromToken and toToken with new balances while preserving selection
     setFromToken(prev => updatedTokens.find(t => t.symbol === prev.symbol) || updatedTokens[0]);
     setToToken(prev => updatedTokens.find(t => t.symbol === prev.symbol) || updatedTokens[1]);
-  }, [ethBalance, usdcBalance, connected]);
+  }, [ethBalance, usdcBalance, btcBalance, connected]);
 
   // Recalculate conversion when token prices change or tokens swap
   useEffect(() => {

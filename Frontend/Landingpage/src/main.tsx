@@ -25,8 +25,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       environmentId: import.meta.env.VITE_DYNAMIC_ENVIRONMENT_ID,
       walletConnectors: [EthereumWalletConnectors],
       
-      // Use connect-only for faster wallet connection (no signature required)
-      initialAuthenticationMode: 'connect-only',
+      // Use connect-and-sign for authentication support
+      initialAuthenticationMode: 'connect-and-sign',
       
       // Recommended wallets configuration
       recommendedWallets: [
@@ -84,10 +84,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           if (args.user?.userId) {
             localStorage.setItem('dynamic_user_id', args.user.userId);
           }
+          console.log('✅ Auth successful:', args.user?.email || args.primaryWallet?.address);
         },
         
-        onAuthFailure: () => {
-          // Silent error handling
+        onAuthFailure: (error) => {
+          // Log auth errors for debugging
+          console.error('❌ Auth failed:', error || 'Unknown error');
         },
         
         onLogout: () => {

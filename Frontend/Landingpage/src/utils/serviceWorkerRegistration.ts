@@ -7,10 +7,15 @@ export function registerServiceWorker() {
         .then((registration) => {
           console.log('SW registered:', registration);
 
-          // Check for updates periodically
-          setInterval(() => {
+          // Check for updates periodically (store interval for potential cleanup)
+          const updateInterval = setInterval(() => {
             registration.update();
           }, 60000); // Check every minute
+
+          // Cleanup on page unload
+          window.addEventListener('beforeunload', () => {
+            clearInterval(updateInterval);
+          });
 
           // Handle updates
           registration.addEventListener('updatefound', () => {

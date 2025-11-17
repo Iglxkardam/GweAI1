@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { FaChartLine, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { StarfieldBackground } from '../../components';
+import { useGlobalPrices } from '../../context/PriceContext';
 
-// Top 10 Crypto by Market Cap
-type TradingPair = 'BTC/USDC' | 'ETH/USDC' | 'BNB/USDC' | 'SOL/USDC' | 'XRP/USDC' | 'ADA/USDC' | 'DOGE/USDC' | 'MATIC/USDC' | 'DOT/USDC' | 'AVAX/USDC';
+// Top 10 Crypto by Market Cap (excluding stablecoins)
+type TradingPair = 'BTC/USDC' | 'ETH/USDC' | 'XRP/USDC' | 'BNB/USDC' | 'SOL/USDC' | 'DOGE/USDC' | 'ADA/USDC' | 'TRX/USDC' | 'AVAX/USDC' | 'TON/USDC';
 
 interface PairData {
   symbol: string;
@@ -35,6 +36,15 @@ const TRADING_PAIRS: Record<TradingPair, PairData> = {
     logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png',
     description: '#2 by Market Cap'
   },
+  'XRP/USDC': { 
+    symbol: 'XRP', 
+    name: 'XRP', 
+    coinGeckoId: 'ripple', 
+    decimals: 6, 
+    tradingViewSymbol: 'BINANCE:XRPUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/52.png',
+    description: '#3 by Market Cap'
+  },
   'BNB/USDC': { 
     symbol: 'BNB', 
     name: 'BNB', 
@@ -42,7 +52,7 @@ const TRADING_PAIRS: Record<TradingPair, PairData> = {
     decimals: 18, 
     tradingViewSymbol: 'BINANCE:BNBUSDT', 
     logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png',
-    description: '#3 by Market Cap'
+    description: '#4 by Market Cap'
   },
   'SOL/USDC': { 
     symbol: 'SOL', 
@@ -51,25 +61,7 @@ const TRADING_PAIRS: Record<TradingPair, PairData> = {
     decimals: 9, 
     tradingViewSymbol: 'BINANCE:SOLUSDT', 
     logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png',
-    description: '#4 by Market Cap'
-  },
-  'XRP/USDC': { 
-    symbol: 'XRP', 
-    name: 'Ripple', 
-    coinGeckoId: 'ripple', 
-    decimals: 6, 
-    tradingViewSymbol: 'BINANCE:XRPUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/52.png',
     description: '#5 by Market Cap'
-  },
-  'ADA/USDC': { 
-    symbol: 'ADA', 
-    name: 'Cardano', 
-    coinGeckoId: 'cardano', 
-    decimals: 6, 
-    tradingViewSymbol: 'BINANCE:ADAUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2010.png',
-    description: '#6 by Market Cap'
   },
   'DOGE/USDC': { 
     symbol: 'DOGE', 
@@ -78,25 +70,25 @@ const TRADING_PAIRS: Record<TradingPair, PairData> = {
     decimals: 8, 
     tradingViewSymbol: 'BINANCE:DOGEUSDT', 
     logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/74.png',
+    description: '#6 by Market Cap'
+  },
+  'ADA/USDC': { 
+    symbol: 'ADA', 
+    name: 'Cardano', 
+    coinGeckoId: 'cardano', 
+    decimals: 6, 
+    tradingViewSymbol: 'BINANCE:ADAUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2010.png',
     description: '#7 by Market Cap'
   },
-  'MATIC/USDC': { 
-    symbol: 'MATIC', 
-    name: 'Polygon', 
-    coinGeckoId: 'matic-network', 
-    decimals: 18, 
-    tradingViewSymbol: 'BINANCE:MATICUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/3890.png',
+  'TRX/USDC': { 
+    symbol: 'TRX', 
+    name: 'TRON', 
+    coinGeckoId: 'tron', 
+    decimals: 6, 
+    tradingViewSymbol: 'BINANCE:TRXUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1958.png',
     description: '#8 by Market Cap'
-  },
-  'DOT/USDC': { 
-    symbol: 'DOT', 
-    name: 'Polkadot', 
-    coinGeckoId: 'polkadot', 
-    decimals: 10, 
-    tradingViewSymbol: 'BINANCE:DOTUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/6636.png',
-    description: '#9 by Market Cap'
   },
   'AVAX/USDC': { 
     symbol: 'AVAX', 
@@ -105,6 +97,15 @@ const TRADING_PAIRS: Record<TradingPair, PairData> = {
     decimals: 18, 
     tradingViewSymbol: 'BINANCE:AVAXUSDT', 
     logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png',
+    description: '#9 by Market Cap'
+  },
+  'TON/USDC': { 
+    symbol: 'TON', 
+    name: 'Toncoin', 
+    coinGeckoId: 'the-open-network', 
+    decimals: 9, 
+    tradingViewSymbol: 'BINANCE:TONUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/11419.png',
     description: '#10 by Market Cap'
   }
 };
@@ -123,103 +124,42 @@ interface MarketListPageProps {
 }
 
 export const MarketListPage: React.FC<MarketListPageProps> = ({ onSelectPair }) => {
+  const { prices, priceChanges, loading: pricesLoading } = useGlobalPrices();
   const [pairPrices, setPairPrices] = useState<PairPriceData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'rank' | 'price' | 'change' | 'volume'>('rank');
 
-  // Fetch prices for all pairs - using CoinGecko API (no CORS issues)
+  // Use global prices and map to pair data
   useEffect(() => {
-    const fetchAllPrices = async () => {
-      try {
-        // Map coin IDs for CoinGecko
-        const coinIds = Array.from(new Set(
-          Object.values(TRADING_PAIRS).map(p => p.coinGeckoId)
-        )).join(',');
+    if (pricesLoading) {
+      setIsLoading(true);
+      return;
+    }
 
-        // Fetch from CoinGecko (no CORS issues)
-        const response = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true`
-        );
-
-        if (!response.ok) {
-          throw new Error('CoinGecko API failed');
-        }
-
-        const data = await response.json();
-        
-        // Map prices to trading pairs
-        const pricePromises = Object.entries(TRADING_PAIRS).map(async ([pairKey, pairData]) => {
-          const coinData = data[pairData.coinGeckoId];
-          
-          if (coinData) {
-            const price = coinData.usd || 0;
-            const change24h = coinData.usd_24h_change || 0;
-            const volume24h = coinData.usd_24h_vol || 0;
-            const marketCap = coinData.usd_market_cap || 0;
-            
-            // Generate sparkline with realistic variance
-            const sparkline = Array.from({ length: 20 }, (_, i) => {
-              const variance = Math.sin(i * 0.5) * (price * 0.02) + (Math.random() - 0.5) * (price * 0.01);
-              return price + variance;
-            });
-            
-            return {
-              pair: pairKey as TradingPair,
-              price,
-              change24h,
-              volume24h,
-              marketCap,
-              sparklineData: sparkline
-            };
-          } else {
-            // Fallback data if CoinGecko fails
-            const fallbackPrices: Record<string, number> = {
-              'ETH/USDC': 3000, 
-              'cbBTC/USDC': 45000, 
-              'cbETH/USDC': 3000
-            };
-            const price = fallbackPrices[pairKey] || 1000;
-            return {
-              pair: pairKey as TradingPair,
-              price,
-              change24h: (Math.random() - 0.5) * 10,
-              volume24h: Math.random() * 1000000000,
-              marketCap: price * 1000000,
-              sparklineData: Array.from({ length: 20 }, () => 
-                price * (0.98 + Math.random() * 0.04)
-              )
-            };
-          }
-        });
-        
-        const pricesData = await Promise.all(pricePromises);
-        setPairPrices(pricesData);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching prices:', error);
-        // Use complete fallback data for all top 10 coins
-        const fallbackData: PairPriceData[] = [
-          { pair: 'BTC/USDC', price: 45000, change24h: 1.8, volume24h: 25000000000, marketCap: 900000000000, sparklineData: Array.from({ length: 20 }, () => 45000 * (0.98 + Math.random() * 0.04)) },
-          { pair: 'ETH/USDC', price: 3000, change24h: 2.5, volume24h: 15000000000, marketCap: 360000000000, sparklineData: Array.from({ length: 20 }, () => 3000 * (0.98 + Math.random() * 0.04)) },
-          { pair: 'BNB/USDC', price: 600, change24h: 1.2, volume24h: 1500000000, marketCap: 90000000000, sparklineData: Array.from({ length: 20 }, () => 600 * (0.98 + Math.random() * 0.04)) },
-          { pair: 'SOL/USDC', price: 150, change24h: 3.5, volume24h: 2000000000, marketCap: 65000000000, sparklineData: Array.from({ length: 20 }, () => 150 * (0.98 + Math.random() * 0.04)) },
-          { pair: 'XRP/USDC', price: 0.65, change24h: -0.8, volume24h: 1200000000, marketCap: 35000000000, sparklineData: Array.from({ length: 20 }, () => 0.65 * (0.98 + Math.random() * 0.04)) },
-          { pair: 'ADA/USDC', price: 0.50, change24h: 1.1, volume24h: 800000000, marketCap: 18000000000, sparklineData: Array.from({ length: 20 }, () => 0.50 * (0.98 + Math.random() * 0.04)) },
-          { pair: 'DOGE/USDC', price: 0.08, change24h: 2.3, volume24h: 600000000, marketCap: 12000000000, sparklineData: Array.from({ length: 20 }, () => 0.08 * (0.98 + Math.random() * 0.04)) },
-          { pair: 'MATIC/USDC', price: 0.90, change24h: -1.2, volume24h: 500000000, marketCap: 8500000000, sparklineData: Array.from({ length: 20 }, () => 0.90 * (0.98 + Math.random() * 0.04)) },
-          { pair: 'DOT/USDC', price: 7.50, change24h: 0.5, volume24h: 400000000, marketCap: 10000000000, sparklineData: Array.from({ length: 20 }, () => 7.50 * (0.98 + Math.random() * 0.04)) },
-          { pair: 'AVAX/USDC', price: 40, change24h: 1.8, volume24h: 600000000, marketCap: 15000000000, sparklineData: Array.from({ length: 20 }, () => 40 * (0.98 + Math.random() * 0.04)) }
-        ];
-        setPairPrices(fallbackData);
-        setIsLoading(false);
-      }
-    };
-
-    fetchAllPrices();
-    // Update prices every 30 seconds (CoinGecko rate limit friendly)
-    const interval = setInterval(fetchAllPrices, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    const pricesData: PairPriceData[] = Object.entries(TRADING_PAIRS).map(([pairKey, pairData]) => {
+      const symbol = pairData.symbol.toLowerCase();
+      const price = prices[symbol as keyof typeof prices] || 0;
+      const change24h = priceChanges[symbol as keyof typeof priceChanges] || 0;
+      
+      // Generate sparkline with realistic variance
+      const sparkline = Array.from({ length: 20 }, (_, i) => {
+        const variance = Math.sin(i * 0.5) * (price * 0.02) + (Math.random() - 0.5) * (price * 0.01);
+        return price + variance;
+      });
+      
+      return {
+        pair: pairKey as TradingPair,
+        price,
+        change24h,
+        volume24h: price * 1000000000 * (0.5 + Math.random()), // Estimated volume
+        marketCap: price * 100000000 * (0.8 + Math.random() * 0.4), // Estimated market cap
+        sparklineData: sparkline
+      };
+    });
+    
+    setPairPrices(pricesData);
+    setIsLoading(false);
+  }, [prices, priceChanges, pricesLoading]);
 
   const handleBuyClick = (pair: TradingPair) => {
     onSelectPair(pair);

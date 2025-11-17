@@ -15,7 +15,7 @@ import { storageService } from '../../../utils/indexedDBService';
 
 // Token Contract Addresses on Base Sepolia (NEWLY DEPLOYED - VERIFIED)
 const USDC_TOKEN_ADDRESS = '0xBEE08798a3634e29F47e3d277C9d11507D55F66a'; // MockUSDC on Base Sepolia
-const BTC_TOKEN_ADDRESS = '0xD8a6E3FCA403d79b6AD6216b60527F51cc967D39'; // cbBTC on Base Sepolia
+const BTC_TOKEN_ADDRESS = '0xD8a6E3FCA403d79b6AD6216b60527F51cc967D39'; // BTC on Base Sepolia
 
 export const useAgwWallet = () => {
   const context = useDynamicContext();
@@ -37,7 +37,7 @@ export const useAgwWallet = () => {
   const address = useMemo(() => primaryWallet?.address, [primaryWallet?.address]);
   const authenticated = !!primaryWallet;
   
-  // Fetch all balances (ETH, USDC, BTC)
+  // Fetch all balances (ETH, USDC, BTC) - Optimized with timeout and error recovery
   const refreshBalance = useCallback(async () => {
     if (!primaryWallet) {
       setEthBalance('0');
@@ -48,6 +48,11 @@ export const useAgwWallet = () => {
     
     try {
       const rpcUrl = 'https://sepolia.base.org';
+      const timeout = 8000; // 8 second timeout to prevent hanging
+      
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
       
       // Fetch all balances in parallel for faster loading
       const [ethBal, usdcData, btcData] = await Promise.allSettled([
@@ -60,6 +65,7 @@ export const useAgwWallet = () => {
             method: 'eth_getBalance', 
             params: [primaryWallet.address, 'latest'] 
           }),
+          signal: controller.signal,
         }).then(r => r.json()).then(d => d.result),
         
         fetch(rpcUrl, {
@@ -74,6 +80,7 @@ export const useAgwWallet = () => {
               data: `0x70a08231000000000000000000000000${primaryWallet.address.slice(2)}`,
             }, 'latest']
           }),
+          signal: controller.signal,
         }).then(r => r.json()).then(d => d.result),
         
         fetch(rpcUrl, {
@@ -88,8 +95,11 @@ export const useAgwWallet = () => {
               data: `0x70a08231000000000000000000000000${primaryWallet.address.slice(2)}`,
             }, 'latest']
           }),
+          signal: controller.signal,
         }).then(r => r.json()).then(d => d.result),
       ]);
+      
+      clearTimeout(timeoutId);
       
       // Process ETH balance
       if (ethBal.status === 'fulfilled' && ethBal.value) {
@@ -112,18 +122,28 @@ export const useAgwWallet = () => {
         setBtcBalance('0');
       }
     } catch (error) {
+      // Silent fail - keep previous balances or set to 0
+      console.warn('Balance fetch timeout or error:', error);
       setEthBalance('0');
       setUsdcBalance('0');
       setBtcBalance('0');
     }
   }, [primaryWallet]);
   
-  // Fetch balance once when wallet connects
+  // Fetch balance once when wallet connects - with debounce to prevent multiple calls
   useEffect(() => {
-    if (authenticated && address) {
-      refreshBalance();
-    }
-  }, [authenticated, address]);
+    if (!authenticated || !address) return;
+    
+    let isMounted = true;
+    const timer = setTimeout(() => {
+      if (isMounted) refreshBalance();
+    }, 500); // Debounce 500ms to prevent rapid consecutive calls
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [authenticated, address, refreshBalance]);
 
   /**
    * Sign in - Opens Dynamic login modal (creates embedded wallet automatically)
