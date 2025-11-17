@@ -14,6 +14,11 @@ export { TypingText } from './TypingText';
 export { PerformanceChart } from './PerformanceChart';
 export { MarkdownMessage } from './MarkdownMessage';
 
+// Wallet Components (Dynamic SDK)
+export { WalletProfile } from './WalletProfile';
+export { WalletActions } from './WalletActions';
+export { NetworkSwitcher } from './NetworkSwitcher';
+
 // Section Components
 export { Hero } from './Hero';
 export { Problem } from './Problem';

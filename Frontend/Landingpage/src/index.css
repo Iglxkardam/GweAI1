@@ -261,16 +261,16 @@ body.landing-page .cursor svg {
 @media (hover: hover) and (pointer: fine) {
   /* Hide default cursor on all app pages (not landing page) */
   body:not(.landing-page),
-  body:not(.landing-page) *,
-  body:not(.landing-page) button,
-  body:not(.landing-page) a,
-  body:not(.landing-page) input,
-  body:not(.landing-page) textarea,
-  body:not(.landing-page) select,
-  body:not(.landing-page) label,
-  body:not(.landing-page) div,
-  body:not(.landing-page) [role="button"],
-  body:not(.landing-page) [tabindex] {
+  body:not(.landing-page) *:not([class*="dynamic"]):not([id*="dynamic"]):not([role="dialog"]):not(iframe),
+  body:not(.landing-page) button:not([class*="dynamic"] button):not([id*="dynamic"] button),
+  body:not(.landing-page) a:not([class*="dynamic"] a):not([id*="dynamic"] a),
+  body:not(.landing-page) input:not([class*="dynamic"] input):not([id*="dynamic"] input),
+  body:not(.landing-page) textarea:not([class*="dynamic"] textarea),
+  body:not(.landing-page) select:not([class*="dynamic"] select),
+  body:not(.landing-page) label:not([class*="dynamic"] label),
+  body:not(.landing-page) div:not([class*="dynamic"]):not([id*="dynamic"]):not([role="dialog"]),
+  body:not(.landing-page) [role="button"]:not([class*="dynamic"] [role="button"]),
+  body:not(.landing-page) [tabindex]:not([class*="dynamic"] [tabindex]) {
     cursor: none !important;
   }
   
@@ -287,4 +287,110 @@ body.landing-page .cursor svg {
   body.landing-page a:hover {
     cursor: pointer !important;
   }
+  
+  /* FORCE normal cursor on Dynamic SDK elements */
+  [class*="dynamic"],
+  [class*="dynamic"] *,
+  [id*="dynamic"],
+  [id*="dynamic"] *,
+  [role="dialog"],
+  [role="dialog"] *,
+  iframe,
+  [data-dynamic-modal],
+  [data-dynamic-modal] *,
+  div[class*="Dynamic"],
+  div[id*="Dynamic"],
+  div[id*="Dynamic"] * {
+    cursor: auto !important;
+  }
+  
+  [class*="dynamic"] button,
+  [id*="dynamic"] button,
+  [role="dialog"] button,
+  [data-dynamic-modal] button {
+    cursor: pointer !important;
+  }
+  
+  [class*="dynamic"] input,
+  [id*="dynamic"] input,
+  [role="dialog"] input,
+  [data-dynamic-modal] input {
+    cursor: text !important;
+  }
+  
+  /* Ensure default cursor on landing page */
+  body.landing-page,
+  body.landing-page *,
+  body.landing-page button,
+  body.landing-page a,
+  body.landing-page input {
+    cursor: auto !important;
+  }
+  
+  body.landing-page button:hover,
+  body.landing-page a:hover {
+    cursor: pointer !important;
+  }
 }
+
+/* Force default cursor for Dynamic modal */
+[data-dynamic-modal],
+[data-dynamic-modal] *,
+div[role="dialog"],
+div[role="dialog"] *,
+iframe[src*="dynamic"],
+iframe[src*="app.dynamic"],
+#dynamic-widget,
+#dynamic-widget *,
+.dynamic-widget-container,
+.dynamic-widget-container *,
+[class*="dynamic"],
+[class*="dynamic"] *,
+[id*="dynamic"],
+[id*="dynamic"] * {
+  cursor: auto !important;
+}
+
+[data-dynamic-modal] button,
+div[role="dialog"] button,
+#dynamic-widget button,
+.dynamic-widget-container button,
+[class*="dynamic"] button,
+[id*="dynamic"] button {
+  cursor: pointer !important;
+}
+
+[data-dynamic-modal] input,
+div[role="dialog"] input,
+#dynamic-widget input,
+.dynamic-widget-container input,
+[class*="dynamic"] input,
+[id*="dynamic"] input {
+  cursor: text !important;
+}
+
+/* Force cursor on all Dynamic SDK elements */
+div[class^="dynamic-"],
+div[class*=" dynamic-"],
+div[id^="dynamic-"],
+div[id*=" dynamic-"] {
+  cursor: auto !important;
+}
+
+/* Override for interactive elements */
+div[class^="dynamic-"] button,
+div[class^="dynamic-"] a,
+div[class^="dynamic-"] input,
+div[class*=" dynamic-"] button,
+div[class*=" dynamic-"] a,
+div[class*=" dynamic-"] input {
+  cursor: pointer !important;
+}
+
+div[class^="dynamic-"] input[type="text"],
+div[class^="dynamic-"] input[type="email"],
+div[class^="dynamic-"] input[type="password"],
+div[class^="dynamic-"] textarea {
+  cursor: text !important;
+}
+

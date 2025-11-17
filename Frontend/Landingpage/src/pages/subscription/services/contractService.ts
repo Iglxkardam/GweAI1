@@ -1,11 +1,11 @@
 import { ethers } from 'ethers';
 import type { PublicClient, WalletClient } from 'viem';
 
-// Deployed contract address on the network
-export const SUBSCRIPTION_CONTRACT_ADDRESS = '0x398cB1C09742D7A4C936eb2eBA0fFb501f4eF73A';
+// Deployed contract address on Base Sepolia (NEWLY DEPLOYED - VERIFIED)
+export const SUBSCRIPTION_CONTRACT_ADDRESS = '0x1E5e2b446758E88971F30f333183f62b6f70bEE0';
 
-// USDC token address (Abstract Testnet - matches useAgwWallet.ts)
-export const USDC_TOKEN_ADDRESS = '0xe4C7fBB0a626ed208021ccabA6Be1566905E2dFc';
+// USDC token address on Base Sepolia (MockUSDC - VERIFIED)
+export const USDC_TOKEN_ADDRESS = '0xBEE08798a3634e29F47e3d277C9d11507D55F66a';
 
 // Plan Types enum matching the contract
 export enum PlanType {

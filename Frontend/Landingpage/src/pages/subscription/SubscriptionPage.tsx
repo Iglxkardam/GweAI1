@@ -52,6 +52,9 @@ export const SubscriptionPage: React.FC = () => {
     setIsModalOpen(true);
     setPurchaseStatus('idle');
     setPurchaseError(undefined);
+    
+    // Refresh balance when opening modal
+    refetch();
   };
 
   const handleConfirmPurchase = async () => {

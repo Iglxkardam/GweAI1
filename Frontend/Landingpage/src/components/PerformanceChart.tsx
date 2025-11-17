@@ -23,6 +23,15 @@ interface TimeRangeConfig {
   points: number; // number of initial points
 }
 
+// Time range configurations - Fixed intervals like real trading charts (moved outside component to prevent recreating)
+const TIME_RANGES: Record<TimeRange, TimeRangeConfig> = {
+  '4h': { label: '4H', duration: 4 * 60 * 60 * 1000, interval: 2 * 60 * 1000, points: 120 },      // 4 hours / 2 min = 120 points
+  '8h': { label: '8H', duration: 8 * 60 * 60 * 1000, interval: 4 * 60 * 1000, points: 120 },      // 8 hours / 4 min = 120 points
+  '24h': { label: '24H', duration: 24 * 60 * 60 * 1000, interval: 10 * 60 * 1000, points: 144 },  // 24 hours / 10 min = 144 points
+  '3d': { label: '3D', duration: 3 * 24 * 60 * 60 * 1000, interval: 30 * 60 * 1000, points: 144 },// 3 days / 30 min = 144 points
+  '1month': { label: '1M', duration: 30 * 24 * 60 * 60 * 1000, interval: 5 * 60 * 60 * 1000, points: 144 } // 30 days / 5 hour = 144 points
+};
+
 export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ currentValue, isConnected, walletAddress }) => {
   const [data, setData] = useState<DataPoint[]>([]);
   const [hoveredPoint, setHoveredPoint] = useState<DataPoint | null>(null);
@@ -34,18 +43,9 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
   const [dimensions, setDimensions] = useState({ width: 800, height: 300 });
   const rafRef = useRef<number>();
 
-  // Time range configurations - Fixed intervals like real trading charts
-  const timeRanges: Record<TimeRange, TimeRangeConfig> = {
-    '4h': { label: '4H', duration: 4 * 60 * 60 * 1000, interval: 2 * 60 * 1000, points: 120 },      // 4 hours / 2 min = 120 points
-    '8h': { label: '8H', duration: 8 * 60 * 60 * 1000, interval: 4 * 60 * 1000, points: 120 },      // 8 hours / 4 min = 120 points
-    '24h': { label: '24H', duration: 24 * 60 * 60 * 1000, interval: 10 * 60 * 1000, points: 144 },  // 24 hours / 10 min = 144 points
-    '3d': { label: '3D', duration: 3 * 24 * 60 * 60 * 1000, interval: 30 * 60 * 1000, points: 144 },// 3 days / 30 min = 144 points
-    '1month': { label: '1M', duration: 30 * 24 * 60 * 60 * 1000, interval: 5 * 60 * 60 * 1000, points: 144 } // 30 days / 5 hour = 144 points
-  };
-
   // Generate realistic historical data for the selected timeframe with EXACT intervals
   const generateHistoricalData = useCallback((baseValue: number, range: TimeRange): DataPoint[] => {
-    const config = timeRanges[range];
+    const config = TIME_RANGES[range];
     const now = Date.now();
     const startTime = now - config.duration;
     
@@ -85,7 +85,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
     }
     
     return historicalData;
-  }, [timeRanges]);
+  }, []);
 
   // Load historical data from wallet-specific localStorage
   useEffect(() => {
@@ -95,7 +95,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
     }
 
     // No loading state - instant transition
-    const config = timeRanges[selectedRange];
+    const config = TIME_RANGES[selectedRange];
     const now = Date.now();
     const cutoffTime = now - config.duration;
     
@@ -131,7 +131,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
     }
     
     setData(historicalData);
-  }, [isConnected, selectedRange, currentValue, walletAddress, generateHistoricalData, timeRanges]);
+  }, [isConnected, selectedRange, currentValue, walletAddress, generateHistoricalData]);
 
   // Detect significant value changes (deposits/withdrawals)
   useEffect(() => {
@@ -154,7 +154,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
   useEffect(() => {
     if (!isConnected || currentValue === 0 || !walletAddress) return;
 
-    const config = timeRanges[selectedRange];
+    const config = TIME_RANGES[selectedRange];
     const updateInterval = Math.min(config.interval, 60000); // Update at interval or 1 min max
 
     // Immediate update on value change
@@ -227,7 +227,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
     const interval = setInterval(updateData, updateInterval);
 
     return () => clearInterval(interval);
-  }, [currentValue, isConnected, selectedRange, walletAddress, timeRanges]);
+  }, [currentValue, isConnected, selectedRange, walletAddress]);
 
   // Handle responsive dimensions
   useEffect(() => {
@@ -425,7 +425,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
           <p className="text-xs text-gray-400 mt-1">
             {hoveredPoint 
               ? getTimeLabel(hoveredPoint.timestamp)
-              : `Last ${timeRanges[selectedRange].label}`
+              : `Last ${TIME_RANGES[selectedRange].label}`
             }
           </p>
         </div>
@@ -443,7 +443,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
       {/* Time Range Selector */}
       <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          {(Object.keys(timeRanges) as TimeRange[]).map((range) => (
+          {(Object.keys(TIME_RANGES) as TimeRange[]).map((range) => (
             <motion.button
               key={range}
               onClick={() => setSelectedRange(range)}
@@ -457,7 +457,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
                 }
               `}
             >
-              {timeRanges[range].label}
+              {TIME_RANGES[range].label}
             </motion.button>
           ))}
         </div>
@@ -694,7 +694,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = memo(({ current
       {/* Performance Stats */}
       <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-4">
         <div className="bg-white/[0.03] rounded-lg p-2 sm:p-3 border border-white/[0.08]">
-          <p className="text-xs text-gray-400 mb-1">{timeRanges[selectedRange].label} Change</p>
+          <p className="text-xs text-gray-400 mb-1">{TIME_RANGES[selectedRange].label} Change</p>
           <p className={`text-sm sm:text-base font-bold ${performanceMetrics.isPositive ? 'text-green-400' : 'text-red-400'}`}>
             {performanceMetrics.isPositive ? '+' : ''}${Math.abs(performanceMetrics.change).toFixed(2)}
           </p>

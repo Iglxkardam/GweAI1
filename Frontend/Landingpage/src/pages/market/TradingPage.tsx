@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaChartLine, FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { FaArrowUp, FaArrowDown, FaArrowLeft } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { StarfieldBackground } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
@@ -11,38 +11,114 @@ declare global {
   }
 }
 
+// Base Chain native and bridged tokens only
 type TradingPair = 'BTC/USDC' | 'ETH/USDC' | 'BNB/USDC' | 'SOL/USDC' | 'XRP/USDC' | 'ADA/USDC' | 'DOGE/USDC' | 'MATIC/USDC' | 'DOT/USDC' | 'AVAX/USDC';
 
 interface PairData {
   symbol: string;
+  name: string;
   coinGeckoId: string;
   decimals: number;
   tradingViewSymbol: string;
+  logo: string;
 }
 
 const TRADING_PAIRS: Record<TradingPair, PairData> = {
-  'BTC/USDC': { symbol: 'BTC', coinGeckoId: 'bitcoin', decimals: 8, tradingViewSymbol: 'BINANCE:BTCUSDT' },
-  'ETH/USDC': { symbol: 'ETH', coinGeckoId: 'ethereum', decimals: 18, tradingViewSymbol: 'BINANCE:ETHUSDT' },
-  'BNB/USDC': { symbol: 'BNB', coinGeckoId: 'binancecoin', decimals: 18, tradingViewSymbol: 'BINANCE:BNBUSDT' },
-  'SOL/USDC': { symbol: 'SOL', coinGeckoId: 'solana', decimals: 9, tradingViewSymbol: 'BINANCE:SOLUSDT' },
-  'XRP/USDC': { symbol: 'XRP', coinGeckoId: 'ripple', decimals: 6, tradingViewSymbol: 'BINANCE:XRPUSDT' },
-  'ADA/USDC': { symbol: 'ADA', coinGeckoId: 'cardano', decimals: 6, tradingViewSymbol: 'BINANCE:ADAUSDT' },
-  'DOGE/USDC': { symbol: 'DOGE', coinGeckoId: 'dogecoin', decimals: 8, tradingViewSymbol: 'BINANCE:DOGEUSDT' },
-  'MATIC/USDC': { symbol: 'MATIC', coinGeckoId: 'matic-network', decimals: 18, tradingViewSymbol: 'BINANCE:MATICUSDT' },
-  'DOT/USDC': { symbol: 'DOT', coinGeckoId: 'polkadot', decimals: 10, tradingViewSymbol: 'BINANCE:DOTUSDT' },
-  'AVAX/USDC': { symbol: 'AVAX', coinGeckoId: 'avalanche-2', decimals: 18, tradingViewSymbol: 'BINANCE:AVAXUSDT' }
+  'BTC/USDC': { 
+    symbol: 'BTC', 
+    name: 'Bitcoin', 
+    coinGeckoId: 'bitcoin', 
+    decimals: 8, 
+    tradingViewSymbol: 'BINANCE:BTCUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1.png'
+  },
+  'ETH/USDC': { 
+    symbol: 'ETH', 
+    name: 'Ethereum', 
+    coinGeckoId: 'ethereum', 
+    decimals: 18, 
+    tradingViewSymbol: 'BINANCE:ETHUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png'
+  },
+  'BNB/USDC': { 
+    symbol: 'BNB', 
+    name: 'BNB', 
+    coinGeckoId: 'binancecoin', 
+    decimals: 18, 
+    tradingViewSymbol: 'BINANCE:BNBUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png'
+  },
+  'SOL/USDC': { 
+    symbol: 'SOL', 
+    name: 'Solana', 
+    coinGeckoId: 'solana', 
+    decimals: 9, 
+    tradingViewSymbol: 'BINANCE:SOLUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png'
+  },
+  'XRP/USDC': { 
+    symbol: 'XRP', 
+    name: 'Ripple', 
+    coinGeckoId: 'ripple', 
+    decimals: 6, 
+    tradingViewSymbol: 'BINANCE:XRPUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/52.png'
+  },
+  'ADA/USDC': { 
+    symbol: 'ADA', 
+    name: 'Cardano', 
+    coinGeckoId: 'cardano', 
+    decimals: 6, 
+    tradingViewSymbol: 'BINANCE:ADAUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2010.png'
+  },
+  'DOGE/USDC': { 
+    symbol: 'DOGE', 
+    name: 'Dogecoin', 
+    coinGeckoId: 'dogecoin', 
+    decimals: 8, 
+    tradingViewSymbol: 'BINANCE:DOGEUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/74.png'
+  },
+  'MATIC/USDC': { 
+    symbol: 'MATIC', 
+    name: 'Polygon', 
+    coinGeckoId: 'matic-network', 
+    decimals: 18, 
+    tradingViewSymbol: 'BINANCE:MATICUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/3890.png'
+  },
+  'DOT/USDC': { 
+    symbol: 'DOT', 
+    name: 'Polkadot', 
+    coinGeckoId: 'polkadot', 
+    decimals: 10, 
+    tradingViewSymbol: 'BINANCE:DOTUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/6636.png'
+  },
+  'AVAX/USDC': { 
+    symbol: 'AVAX', 
+    name: 'Avalanche', 
+    coinGeckoId: 'avalanche-2', 
+    decimals: 18, 
+    tradingViewSymbol: 'BINANCE:AVAXUSDT', 
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png'
+  }
 };
 
-export const MarketPage: React.FC = () => {
+interface TradingPageProps {
+  pair: TradingPair;
+  onBack: () => void;
+}
+
+export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onBack }) => {
   const { ethBalance, usdcBalance, connected, address } = useAgwWallet();
   
-  const [selectedPair, setSelectedPair] = useState<TradingPair>('BTC/USDC');
+  const [selectedPair, setSelectedPair] = useState<TradingPair>(initialPair || 'BTC/USDC');
   const [isLoading, setIsLoading] = useState(true);
   const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
   const [price, setPrice] = useState('');
   const [amount, setAmount] = useState('');
-  // Real-time price state - synchronized with TradingView and CoinGecko
-  // Updated every 10 seconds to match live market data
   const [realTimePrice, setRealTimePrice] = useState(0);
   const [priceChange24h, setPriceChange24h] = useState(0);
   const [recentTrades, setRecentTrades] = useState<any[]>([]);
@@ -52,6 +128,13 @@ export const MarketPage: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const widgetInstanceRef = useRef<any>(null);
   const scriptLoadedRef = useRef(false);
+
+  // Update selected pair when prop changes
+  useEffect(() => {
+    if (initialPair && initialPair in TRADING_PAIRS) {
+      setSelectedPair(initialPair);
+    }
+  }, [initialPair]);
 
   // Load TradingView script once
   useEffect(() => {
@@ -144,7 +227,6 @@ export const MarketPage: React.FC = () => {
         const pairData = TRADING_PAIRS[selectedPair];
         const coinId = pairData.coinGeckoId;
         
-        // Fetch current price from CoinGecko
         const response = await fetch(
           `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`
         );
@@ -160,17 +242,10 @@ export const MarketPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching live price from CoinGecko:', error);
-        // Fallback prices
         const fallbackPrices: Record<TradingPair, number> = {
-          'BTC/USDC': 45000,
-          'ETH/USDC': 3000,
-          'BNB/USDC': 600,
-          'SOL/USDC': 150,
-          'XRP/USDC': 0.65,
-          'ADA/USDC': 0.50,
-          'DOGE/USDC': 0.08,
-          'MATIC/USDC': 0.90,
-          'DOT/USDC': 7.50,
+          'BTC/USDC': 45000, 'ETH/USDC': 3000, 'BNB/USDC': 600,
+          'SOL/USDC': 150, 'XRP/USDC': 0.65, 'ADA/USDC': 0.50,
+          'DOGE/USDC': 0.08, 'MATIC/USDC': 0.90, 'DOT/USDC': 7.50,
           'AVAX/USDC': 40
         };
         const fallbackPrice = fallbackPrices[selectedPair];
@@ -190,7 +265,6 @@ export const MarketPage: React.FC = () => {
   useEffect(() => {
     const fetchRecentTrades = async () => {
       try {
-        // Simulate recent trades with realistic data
         const mockTrades = Array.from({ length: 25 }, (_, i) => {
           const timestamp = Date.now() - (i * 60000 * Math.random() * 10);
           const isBuy = Math.random() > 0.5;
@@ -217,12 +291,11 @@ export const MarketPage: React.FC = () => {
 
     if (realTimePrice > 0) {
       fetchRecentTrades();
-      const interval = setInterval(fetchRecentTrades, 10000); // Update every 10 seconds
+      const interval = setInterval(fetchRecentTrades, 10000);
       return () => clearInterval(interval);
     }
   }, [selectedPair, realTimePrice]);
 
-  // Pagination logic
   const indexOfLastTrade = currentPage * tradesPerPage;
   const indexOfFirstTrade = indexOfLastTrade - tradesPerPage;
   const currentTrades = recentTrades.slice(indexOfFirstTrade, indexOfLastTrade);
@@ -234,7 +307,7 @@ export const MarketPage: React.FC = () => {
 
   const handlePlaceOrder = () => {
     if (!connected) {
-      alert('Please connect your Abstract wallet first');
+      alert('Please connect your wallet first (MetaMask, WalletConnect, or Coinbase)');
       return;
     }
     
@@ -245,7 +318,6 @@ export const MarketPage: React.FC = () => {
     
     const pairSymbol = TRADING_PAIRS[selectedPair].symbol;
     
-    // Check balances
     if (orderType === 'buy') {
       const usdcNeeded = parseFloat(amount);
       const cryptoAmount = usdcNeeded / realTimePrice;
@@ -268,8 +340,6 @@ export const MarketPage: React.FC = () => {
     setAmount('');
   };
 
-
-
   return (
     <motion.div 
       className="min-h-screen pt-20 pb-8 px-4 relative"
@@ -291,13 +361,27 @@ export const MarketPage: React.FC = () => {
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             <div className="space-y-2">
-              <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent flex items-center gap-3">
-                <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-3 rounded-xl">
-                  <FaChartLine className="text-white text-2xl" />
-                </div>
-                Spot Market
-              </h1>
-              <p className="text-gray-400 text-base ml-1">Real-time Trading • Powered by DEX</p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={onBack}
+                  className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg transition-all"
+                  title="Back to Market List"
+                >
+                  <FaArrowLeft className="text-white text-lg" />
+                </button>
+                <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent flex items-center gap-3">
+                  <img 
+                    src={TRADING_PAIRS[selectedPair].logo} 
+                    alt={TRADING_PAIRS[selectedPair].name}
+                    className="w-12 h-12 rounded-full"
+                  />
+                  {TRADING_PAIRS[selectedPair].name} Trading
+                </h1>
+              </div>
+              <p className="text-gray-400 text-base ml-1">Real-time Trading • Base Sepolia Testnet</p>
+              <div className="mt-2 inline-block px-3 py-1 bg-blue-500/20 border border-blue-500/50 rounded-lg">
+                <p className="text-blue-400 text-xs font-semibold">🔵 Testnet Mode • Gas sponsored</p>
+              </div>
             </div>
             
             {/* Trading Pair Selector & Price Display */}
@@ -306,19 +390,15 @@ export const MarketPage: React.FC = () => {
               <div className="bg-gradient-to-br from-white/[0.03] to-white/[0.02] backdrop-blur-xl rounded-xl p-3 shadow-xl">
                 <select
                   value={selectedPair}
-                  onChange={(e) => setSelectedPair(e.target.value as TradingPair)}
+                  onChange={(e) => {
+                    const newPair = e.target.value as TradingPair;
+                    setSelectedPair(newPair);
+                  }}
                   className="bg-transparent text-white font-bold text-lg cursor-pointer focus:outline-none pr-8"
                 >
-                  <option value="BTC/USDC" className="bg-gray-900">BTC/USDC</option>
                   <option value="ETH/USDC" className="bg-gray-900">ETH/USDC</option>
-                  <option value="BNB/USDC" className="bg-gray-900">BNB/USDC</option>
-                  <option value="SOL/USDC" className="bg-gray-900">SOL/USDC</option>
-                  <option value="XRP/USDC" className="bg-gray-900">XRP/USDC</option>
-                  <option value="ADA/USDC" className="bg-gray-900">ADA/USDC</option>
-                  <option value="DOGE/USDC" className="bg-gray-900">DOGE/USDC</option>
-                  <option value="MATIC/USDC" className="bg-gray-900">MATIC/USDC</option>
-                  <option value="DOT/USDC" className="bg-gray-900">DOT/USDC</option>
-                  <option value="AVAX/USDC" className="bg-gray-900">AVAX/USDC</option>
+                  <option value="cbBTC/USDC" className="bg-gray-900">cbBTC/USDC</option>
+                  <option value="cbETH/USDC" className="bg-gray-900">cbETH/USDC</option>
                 </select>
               </div>
               
@@ -354,7 +434,6 @@ export const MarketPage: React.FC = () => {
                 Place Order
               </h3>
               
-              {/* Wallet Status - Only show if not connected */}
               {!connected && (
                 <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                   <p className="text-yellow-400 text-xs font-semibold">⚠ Connect wallet to trade</p>
@@ -448,7 +527,7 @@ export const MarketPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Total Display with Real Calculation */}
+              {/* Total Display */}
               <div className="mb-4 p-3 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-300 font-medium">
@@ -504,7 +583,7 @@ export const MarketPage: React.FC = () => {
                 </h3>
               </div>
               
-              {/* TradingView Lightweight Charts Container */}
+              {/* TradingView Chart Container */}
               <div className="relative" style={{height: 'calc(100% - 50px)', overflow: 'hidden'}}>
                 {isLoading && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-10">

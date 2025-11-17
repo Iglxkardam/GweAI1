@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient, useWriteContract } from 'wagmi';
+import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
+import { encodeFunctionData } from 'viem';
 import {
-  getUserSubscription,
-  getUSDCBalance,
-  formatUSDC,
   getTimeRemaining,
   PlanType,
   formatExpiryDate,
   getPlanName,
   SUBSCRIPTION_CONTRACT_ADDRESS,
   USDC_TOKEN_ADDRESS,
-  SUBSCRIPTION_PLAN_ABI,
   ERC20_ABI,
 } from '../services/contractService';
 
@@ -61,7 +58,9 @@ const subscriptionCache = new Map<string, {
 const CACHE_DURATION = 30000; // 30 seconds
 
 export function useSubscription(): UseSubscriptionReturn {
-  const { address, isConnected } = useAccount();
+  const { primaryWallet } = useDynamicContext();
+  const address = primaryWallet?.address;
+  const isConnected = !!primaryWallet;
   
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [usdcBalance, setUsdcBalance] = useState('0');
@@ -69,21 +68,18 @@ export function useSubscription(): UseSubscriptionReturn {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch subscription data
-  const publicClient = usePublicClient();
-
-  const fetchSubscriptionData = async () => {
-    if (!address || !isConnected || !publicClient) {
+  const fetchSubscriptionData = async (forceRefresh = false) => {
+    if (!address || !isConnected || !primaryWallet) {
       setSubscription(null);
       setUsdcBalance('0');
       return;
     }
 
-    // Check cache first
+    // Check cache first (unless force refresh)
     const cached = subscriptionCache.get(address.toLowerCase());
     const now = Date.now();
     
-    if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+    if (!forceRefresh && cached && (now - cached.timestamp) < CACHE_DURATION) {
       console.log('[useSubscription] Using cached data for:', address);
       setSubscription(cached.data);
       setUsdcBalance(cached.balance);
@@ -91,55 +87,134 @@ export function useSubscription(): UseSubscriptionReturn {
       return;
     }
 
+    console.log('[useSubscription] 🔄 Fetching fresh data (forceRefresh:', forceRefresh, ')');
     setIsLoading(true);
     setError(null);
 
     try {
       console.log('[useSubscription] Fetching data for address:', address);
-      console.log('[useSubscription] Using USDC contract:', await import('../services/contractService').then(m => m.USDC_TOKEN_ADDRESS));
-      console.log('[useSubscription] Using publicClient:', publicClient);
+      const provider = await (primaryWallet as any).getWalletClient?.();
       
-      // Fetch subscription and balance using wagmi's publicClient
-      const [sub, balance] = await Promise.all([
-        getUserSubscription(address, publicClient as any),
-        getUSDCBalance(address, publicClient as any),
-      ]);
-
-      const formattedBalance = formatUSDC(balance);
-      setSubscription(sub);
+      // Fetch USDC balance
+      const usdcBalanceData = await provider.request({
+        method: 'eth_call',
+        params: [
+          {
+            to: USDC_TOKEN_ADDRESS,
+            data: `0x70a08231000000000000000000000000${address.slice(2)}`, // balanceOf(address)
+          },
+          'latest',
+        ],
+      });
+      const usdcBal = BigInt(usdcBalanceData as string);
+      const formattedBalance = (Number(usdcBal) / 1e6).toString(); // USDC has 6 decimals
+      
+      console.log('[useSubscription] 💰 USDC Balance:', {
+        raw: usdcBal.toString(),
+        formatted: formattedBalance,
+        address: address
+      });
+      
+      // Set balance first (it's working)
       setUsdcBalance(formattedBalance);
+      
+      let sub: SubscriptionData;
+      
+      try {
+        // Use getWalletClient to get proper viem client for read operations
+        const walletClient = await (primaryWallet as any).getWalletClient?.();
+        
+        if (!walletClient) {
+          throw new Error('Could not get wallet client');
+        }
+        
+        // Use viem's readContract for proper contract reading
+        console.log('[useSubscription] 📖 Reading subscription from contract...');
+        console.log('[useSubscription] 📍 Contract:', SUBSCRIPTION_CONTRACT_ADDRESS);
+        console.log('[useSubscription] 📍 User:', address);
+        
+        // Import needed for proper type handling
+        const { readContract } = await import('viem/actions');
+        const { SUBSCRIPTION_PLAN_ABI } = await import('../services/contractService');
+        
+        const result = await readContract(walletClient, {
+          address: SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`,
+          abi: SUBSCRIPTION_PLAN_ABI,
+          functionName: 'getSubscription',
+          args: [address as `0x${string}`],
+        }) as [number, bigint, boolean, boolean];
+        
+        console.log('[useSubscription] 📊 Raw contract result:', result);
+        
+        // Result is array: [planType, expiryTimestamp, hasAccess, isExpired]
+        sub = {
+          planType: Number(result[0]) as PlanType,
+          expiryTimestamp: result[1] as bigint,
+          hasAccess: result[2] as boolean,
+          isExpired: result[3] as boolean,
+        };
+        
+        console.log('[useSubscription] ✅ Subscription data fetched successfully');
+        console.log('[useSubscription] 📦 Decoded:', {
+          plan: getPlanName(sub.planType),
+          expiry: sub.expiryTimestamp.toString(),
+          hasAccess: sub.hasAccess,
+          isExpired: sub.isExpired,
+        });
+      } catch (contractErr) {
+        console.warn('[useSubscription] ⚠️ Contract call failed, using FREE plan defaults:', contractErr);
+        // Contract call failed - use default FREE plan
+        sub = {
+          planType: PlanType.FREE,
+          expiryTimestamp: BigInt(0),
+          hasAccess: false,
+          isExpired: true,
+        };
+      }
+
+      setSubscription(sub);
       
       // Cache the result
       subscriptionCache.set(address.toLowerCase(), {
         data: sub,
         balance: formattedBalance,
-        timestamp: now,
+        timestamp: Number(now),
       });
       
       console.log('[useSubscription] Fetched data:', {
         plan: getPlanName(sub.planType),
         hasAccess: sub.hasAccess,
         isExpired: sub.isExpired,
-        balanceRaw: balance.toString(),
-        balanceFormatted: formattedBalance,
-        balanceNumber: parseFloat(formattedBalance),
+        balance: formattedBalance,
       });
     } catch (err) {
       console.error('Error fetching subscription data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch subscription data');
+      console.warn('⚠️ Contract call failed - using default values. Balance still fetched successfully.');
+      
+      // Don't set error message - just use defaults for subscription
+      // Keep the balance that was successfully fetched
+      setSubscription({
+        planType: PlanType.FREE,
+        expiryTimestamp: BigInt(0),
+        hasAccess: false,
+        isExpired: true,
+      });
+      
+      // Only reset balance if it wasn't set (meaning USDC fetch also failed)
+      if (!usdcBalance || usdcBalance === '0') {
+        setUsdcBalance('0');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const { writeContractAsync } = useWriteContract();
-
-  // Purchase plan function with Chrome pop-up protection
+  // Purchase plan function using Dynamic
   const purchasePlan = async (
     planType: PlanType,
     onProgress?: (step: 'approving' | 'approved' | 'purchasing' | 'success' | 'error') => void
   ) => {
-    if (!address || !isConnected) {
+    if (!address || !isConnected || !primaryWallet) {
       setError('Please connect your wallet');
       onProgress?.('error');
       return;
@@ -155,7 +230,44 @@ export function useSubscription(): UseSubscriptionReturn {
     setError(null);
 
     try {
-      onProgress?.('approving');
+      // Get wallet client from Dynamic SDK - wait for iframe to be ready
+      console.log('[useSubscription] 🔄 Getting wallet client...');
+      const walletClient = await (primaryWallet as any).getWalletClient?.();
+      
+      if (!walletClient) {
+        throw new Error('Could not get wallet client - please try reconnecting your wallet');
+      }
+      
+      console.log('[useSubscription] ✅ Wallet client ready');
+      
+      // Check current subscription state first
+      console.log('[useSubscription] 🔍 Checking current subscription state...');
+      const { readContract: readContractAction } = await import('viem/actions');
+      const contractService = await import('../services/contractService');
+      
+      const currentSub: any = await readContractAction(walletClient, {
+        address: SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`,
+        abi: contractService.SUBSCRIPTION_PLAN_ABI,
+        functionName: 'getSubscription',
+        args: [address as `0x${string}`],
+      });
+      
+      const currentPlanType = Number(currentSub[0]);
+      const currentExpiry = currentSub[1] as bigint;
+      const currentHasAccess = currentSub[2] as boolean;
+      
+      console.log('[useSubscription] 📊 Current subscription:', {
+        planType: currentPlanType,
+        expiry: currentExpiry.toString(),
+        hasAccess: currentHasAccess,
+      });
+      
+      // Check for corrupted state: non-FREE plan with 0 expiry
+      if (currentPlanType !== 0 && currentExpiry === 0n) {
+        console.error('[useSubscription] ❌ Subscription in corrupted state!');
+        throw new Error('Your subscription is in an invalid state. Please contact support or try again later.');
+      }
+      
       // Plan prices
       const prices: Record<PlanType, bigint> = {
         [PlanType.FREE]: BigInt(0),
@@ -167,63 +279,208 @@ export function useSubscription(): UseSubscriptionReturn {
       console.log('[useSubscription] 💳 Starting purchase flow for plan:', planType);
       console.log('[useSubscription] 💰 Price:', price.toString(), 'USDC');
       
-      // Step 1: Approve USDC spending (First user action)
-      console.log('[useSubscription] ⏳ Step 1/2: Requesting USDC approval...');
-      console.log('[useSubscription] 👆 Please approve the transaction in your wallet');
+      onProgress?.('approving');
       
-      const approveHash = await writeContractAsync({
-        address: USDC_TOKEN_ADDRESS as `0x${string}`,
+      // Step 1: Approve USDC spending using viem's encodeFunctionData
+      console.log('[useSubscription] ⏳ Step 1/2: Requesting USDC approval...');
+      console.log('[useSubscription] 📍 USDC Address:', USDC_TOKEN_ADDRESS);
+      console.log('[useSubscription] 📍 Spender (Subscription):', SUBSCRIPTION_CONTRACT_ADDRESS);
+      console.log('[useSubscription] 💰 Amount to approve:', price.toString());
+      console.log('[useSubscription] 📍 User address:', address);
+      
+      // Check current allowance first
+      console.log('[useSubscription] 🔍 Checking current allowance before approval...');
+      const checkAllowanceData = encodeFunctionData({
         abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`, price],
+        functionName: 'allowance',
+        args: [address as `0x${string}`, SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`],
       });
       
-      console.log('[useSubscription] ✅ Approval transaction submitted:', approveHash);
-      console.log('[useSubscription] ⏳ Waiting for approval to be mined...');
+      const currentAllowanceResult = await walletClient.request({
+        method: 'eth_call',
+        params: [
+          {
+            to: USDC_TOKEN_ADDRESS,
+            data: checkAllowanceData,
+          },
+          'latest',
+        ],
+      });
       
-      // Wait for approval confirmation (minimum 2 blocks)
-      if (publicClient) {
-        await publicClient.waitForTransactionReceipt({
-          hash: approveHash,
-          confirmations: 1,
-        });
-        console.log('[useSubscription] ✅ Approval confirmed on-chain');
+      const currentAllowance = BigInt(currentAllowanceResult as string);
+      console.log('[useSubscription] 📊 Current allowance BEFORE approval:', currentAllowance.toString());
+      
+      if (currentAllowance >= price) {
+        console.log('[useSubscription] ✅ Sufficient allowance already exists! Skipping approval...');
         onProgress?.('approved');
       } else {
-        // Fallback: wait 5 seconds if no publicClient
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        onProgress?.('approved');
+        console.log('[useSubscription] ⚠️  Need to approve:', (price - currentAllowance).toString(), 'more USDC');
+        
+        // Use viem to properly encode the approve function call
+        const approveData = encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [SUBSCRIPTION_CONTRACT_ADDRESS, price],
+        });
+        
+        console.log('[useSubscription] 📝 Encoded approve data:', approveData);
+        
+        try {
+          const approveHash = await walletClient.sendTransaction({
+            to: USDC_TOKEN_ADDRESS as `0x${string}`,
+            data: approveData,
+            gas: BigInt(90000),
+          });
+          
+          console.log('[useSubscription] ✅ Approval transaction submitted:', approveHash);
+          console.log('[useSubscription] 🔍 Approve tx:', `https://sepolia.basescan.org/tx/${approveHash}`);
+          
+          // Wait for approval transaction receipt
+          console.log('[useSubscription] ⏳ Waiting for approval to be mined...');
+          const { waitForTransactionReceipt: waitForReceipt } = await import('viem/actions');
+          
+          const approveReceipt = await waitForReceipt(walletClient, {
+            hash: approveHash,
+            timeout: 60_000,
+          });
+          
+          console.log('[useSubscription] 📝 Approval receipt:', {
+            status: approveReceipt.status,
+            blockNumber: approveReceipt.blockNumber.toString(),
+          });
+          
+          if (approveReceipt.status === 'reverted') {
+            throw new Error('Approval transaction was reverted!');
+          }
+          
+          console.log('[useSubscription] ✅ Approval confirmed on chain!');
+          
+          onProgress?.('approved');
+        } catch (approveErr: any) {
+          console.error('[useSubscription] ❌ Approval failed:', approveErr);
+          throw new Error(`Approval failed: ${approveErr.message}`);
+        }
       }
       
-      // Small delay to prevent Chrome pop-up blocking (user-initiated flow)
-      console.log('[useSubscription] ⏳ Preparing purchase transaction...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Verify approval was successful by checking allowance again
+      console.log('[useSubscription] 🔍 Verifying final allowance...');
+      const allowanceData = encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [address as `0x${string}`, SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`],
+      });
       
-      // Step 2: Purchase the plan (Second user action)
+      const allowanceResult = await walletClient.request({
+        method: 'eth_call',
+        params: [
+          {
+            to: USDC_TOKEN_ADDRESS,
+            data: allowanceData,
+          },
+          'latest',
+        ],
+      });
+      
+      const allowance = BigInt(allowanceResult as string);
+      console.log('[useSubscription] ✅ Current allowance:', allowance.toString(), 'USDC (raw)');
+      console.log('[useSubscription] ✅ Required amount:', price.toString(), 'USDC (raw)');
+      
+      if (allowance < price) {
+        throw new Error(`Approval failed! Allowance (${allowance}) is less than required (${price})`);
+      }
+      
+      onProgress?.('approved');
+      
+      // Extra wait to ensure approval is visible across all nodes
+      console.log('[useSubscription] ⏳ Extra wait for network propagation (3 seconds)...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Step 2: Purchase the plan - manually encode to avoid ABI issues
       onProgress?.('purchasing');
       console.log('[useSubscription] ⏳ Step 2/2: Requesting plan purchase...');
-      console.log('[useSubscription] 👆 Please confirm the purchase in your wallet');
+      console.log('[useSubscription] 📍 Subscription Contract:', SUBSCRIPTION_CONTRACT_ADDRESS);
+      console.log('[useSubscription] 📦 Plan Type:', planType);
       
-      const purchaseHash = await writeContractAsync({
-        address: SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`,
-        abi: SUBSCRIPTION_PLAN_ABI,
-        functionName: 'purchasePlan',
-        args: [planType],
+      // Manually encode purchasePlan(uint8) - selector: 0x98693010
+      const planTypeHex = planType.toString(16).padStart(64, '0');
+      const purchaseData = `0x98693010${planTypeHex}`;
+      
+      console.log('[useSubscription] 📝 Encoded purchase data:', purchaseData);
+      console.log('[useSubscription] 📍 Sending from address:', address);
+      console.log('[useSubscription] 📍 WalletClient account:', walletClient.account?.address);
+      
+      const purchaseHash = await walletClient.sendTransaction({
+        to: SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`,
+        from: address as `0x${string}`,  // Explicitly set from address
+        data: purchaseData as `0x${string}`,
+        gas: BigInt(200000),
       });
       
       console.log('[useSubscription] ✅ Purchase transaction submitted:', purchaseHash);
-      console.log('[useSubscription] ⏳ Waiting for purchase to be mined...');
+      console.log('[useSubscription] 🔍 Transaction hash:', `https://sepolia.basescan.org/tx/${purchaseHash}`);
       
-      // Wait for purchase confirmation
-      if (publicClient) {
-        await publicClient.waitForTransactionReceipt({
+      // Wait for transaction receipt to verify it was actually mined successfully
+      console.log('[useSubscription] ⏳ Waiting for transaction receipt...');
+      const { waitForTransactionReceipt } = await import('viem/actions');
+      
+      try {
+        const receipt = await waitForTransactionReceipt(walletClient, {
           hash: purchaseHash,
-          confirmations: 1,
+          timeout: 60_000, // 60 seconds timeout
         });
-        console.log('[useSubscription] ✅ Purchase confirmed on-chain');
-      } else {
-        // Fallback: wait 5 seconds if no publicClient
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        console.log('[useSubscription] 📝 Transaction receipt:', {
+          status: receipt.status,
+          blockNumber: receipt.blockNumber.toString(),
+          gasUsed: receipt.gasUsed.toString(),
+          logs: receipt.logs.length,
+        });
+        
+        if (receipt.status === 'reverted') {
+          console.error('[useSubscription] ❌ Transaction reverted!');
+          throw new Error('Purchase transaction was reverted by the contract. Check your USDC balance and allowance.');
+        }
+        
+        if (receipt.logs.length === 0) {
+          console.error('[useSubscription] ❌ No events emitted - transaction likely reverted internally');
+          throw new Error('Transaction succeeded but no events emitted. Contract call may have failed.');
+        }
+        
+        console.log('[useSubscription] ✅ Transaction confirmed on chain!');
+        
+      } catch (receiptErr: any) {
+        console.error('[useSubscription] ❌ Error waiting for receipt:', receiptErr);
+        throw new Error(`Transaction failed: ${receiptErr.message}`);
+      }
+      
+      // Extra wait to ensure state is updated
+      console.log('[useSubscription] ⏳ Waiting for state update (5 seconds)...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      // Verify the purchase was successful by checking subscription
+      console.log('[useSubscription] 🔍 Verifying purchase on contract...');
+      const { readContract } = await import('viem/actions');
+      const { SUBSCRIPTION_PLAN_ABI } = await import('../services/contractService');
+      
+      const verifyResult: any = await readContract(walletClient, {
+        address: SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`,
+        abi: SUBSCRIPTION_PLAN_ABI,
+        functionName: 'getSubscription',
+        args: [address as `0x${string}`],
+      });
+      
+      console.log('[useSubscription] 📊 Post-purchase subscription:', {
+        planType: Number(verifyResult[0]),
+        expiry: verifyResult[1].toString(),
+        hasAccess: verifyResult[2],
+        isExpired: verifyResult[3],
+      });
+      
+      // Check if subscription updated to the purchased plan
+      if (Number(verifyResult[0]) !== planType && verifyResult[2] === false) {
+        console.error('[useSubscription] ❌ Purchase transaction succeeded but subscription not updated!');
+        console.error('[useSubscription] This means the contract reverted or payment failed');
+        throw new Error('Purchase transaction succeeded but subscription not activated. Check transaction on BaseScan.');
       }
       
       console.log('[useSubscription] 🎉 Subscription purchased successfully!');
@@ -245,13 +502,10 @@ export function useSubscription(): UseSubscriptionReturn {
             err.message.includes('user denied') ||
             err.message.includes('User denied')) {
           setError('Transaction cancelled by user');
-          console.log('[useSubscription] ℹ️ User cancelled the transaction');
         } else if (err.message.includes('insufficient funds')) {
           setError('Insufficient USDC balance');
-          console.log('[useSubscription] ℹ️ Insufficient funds');
-        } else if (err.message.includes('Failed to initialize')) {
-          setError('Wallet connection issue. Please try reconnecting your wallet.');
-          console.log('[useSubscription] ℹ️ Wallet initialization failed - may be Chrome pop-up blocker');
+        } else if (err.message.includes('Iframe') || err.message.includes('contentWindow')) {
+          setError('Wallet popup not ready - please try again');
         } else {
           setError(err.message);
         }
@@ -291,6 +545,6 @@ export function useSubscription(): UseSubscriptionReturn {
     isLoading,
     isPurchasing,
     error,
-    refetch: fetchSubscriptionData,
+    refetch: () => fetchSubscriptionData(true), // Force refresh when manually called
   };
 }

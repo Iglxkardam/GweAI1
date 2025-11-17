@@ -8,6 +8,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
   const cursorRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isClicked, setIsClicked] = useState(false);
+  const [isDynamicOpen, setIsDynamicOpen] = useState(false);
   const mouseRef = useRef({ x: 0, y: 0 });
   const oldPosRef = useRef({ x: 0, y: 0 });
   const prevAngleRef = useRef(0);
@@ -29,20 +30,109 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
   const colors = themeColors[theme];
 
   useEffect(() => {
-    // Hide default cursor
-    document.body.style.cursor = 'none';
-    // Hide cursor on all interactive elements
+    // Monitor for Dynamic modal open/close
+    const checkDynamicModal = () => {
+      const hasDynamicModal = document.querySelector('[role="dialog"]') !== null ||
+                             document.querySelector('[data-dynamic-modal]') !== null ||
+                             document.querySelector('[class*="dynamic-widget"]') !== null ||
+                             document.querySelector('iframe[src*="dynamic"]') !== null;
+      setIsDynamicOpen(hasDynamicModal);
+      return hasDynamicModal;
+    };
+
+    // Initial check
+    checkDynamicModal();
+
+    // Watch for DOM changes
+    const observer = new MutationObserver(() => {
+      checkDynamicModal();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'id', 'role']
+    });
+
+    // Check if mouse is over Dynamic modal/widget
+    const isOverDynamicElement = (element: Element | null): boolean => {
+      if (!element) return false;
+      
+      // Check if element or any parent is Dynamic-related
+      let current: Element | null = element;
+      while (current) {
+        const id = current.id || '';
+        const className = typeof current.className === 'string' ? current.className : '';
+        const role = current.getAttribute('role') || '';
+        
+        // Check for Dynamic SDK elements
+        if (
+          id.toLowerCase().includes('dynamic') ||
+          className.toLowerCase().includes('dynamic') ||
+          role === 'dialog' ||
+          current.tagName === 'IFRAME' ||
+          current.getAttribute('data-dynamic-modal') !== null
+        ) {
+          return true;
+        }
+        
+        current = current.parentElement;
+      }
+      return false;
+    };
+
+    // Hide default cursor only on non-Dynamic elements
     const style = document.createElement('style');
     style.id = 'custom-cursor-style';
     style.innerHTML = `
-      * {
+      /* Hide cursor by default */
+      html, body {
         cursor: none !important;
       }
-      html {
+      
+      /* Hide cursor on all elements EXCEPT Dynamic */
+      *:not([class*="dynamic"]):not([id*="dynamic"]):not([role="dialog"]):not(iframe) {
         cursor: none !important;
       }
-      body {
-        cursor: none !important;
+      
+      /* FORCE show cursor on Dynamic elements - HIGHEST PRIORITY */
+      [class*="dynamic"],
+      [class*="dynamic"] *,
+      [id*="dynamic"],
+      [id*="dynamic"] *,
+      [role="dialog"],
+      [role="dialog"] *,
+      iframe,
+      iframe *,
+      [data-dynamic-modal],
+      [data-dynamic-modal] *,
+      div[class*="Dynamic"],
+      div[id*="Dynamic"] {
+        cursor: auto !important;
+      }
+      
+      /* Interactive elements in Dynamic */
+      [class*="dynamic"] button,
+      [class*="dynamic"] a,
+      [id*="dynamic"] button,
+      [id*="dynamic"] a,
+      [role="dialog"] button,
+      [role="dialog"] a,
+      [data-dynamic-modal] button,
+      [data-dynamic-modal] a {
+        cursor: pointer !important;
+      }
+      
+      [class*="dynamic"] input,
+      [class*="dynamic"] textarea,
+      [id*="dynamic"] input,
+      [id*="dynamic"] textarea,
+      [role="dialog"] input,
+      [role="dialog"] textarea,
+      [data-dynamic-modal] input,
+      [data-dynamic-modal] textarea {
+        cursor: text !important;
       }
     `;
     // Remove existing style if present
@@ -79,6 +169,21 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
 
     let rafId: number | null = null;
     const handleMouseMove = (e: MouseEvent) => {
+      // Check if mouse is over Dynamic element
+      const target = e.target as Element;
+      const overDynamic = isOverDynamicElement(target);
+      
+      // Hide custom cursor when over Dynamic elements
+      if (overDynamic) {
+        setIsVisible(false);
+        // Also restore body cursor temporarily
+        document.body.style.cursor = 'auto';
+        return;
+      } else {
+        // Hide body cursor when not over Dynamic
+        document.body.style.cursor = 'none';
+      }
+      
       // Use clientX/clientY for fixed positioning (viewport coordinates)
       mouseRef.current = { x: e.clientX, y: e.clientY };
       
@@ -124,6 +229,9 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
         cancelAnimationFrame(rafId);
       }
       
+      // Disconnect observer
+      observer.disconnect();
+      
       // Remove custom cursor style
       const existingStyle = document.getElementById('custom-cursor-style');
       if (existingStyle) {
@@ -140,6 +248,30 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ theme = 'app' }) => 
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, [isVisible]);
+
+  // Effect to handle Dynamic modal state
+  useEffect(() => {
+    if (isDynamicOpen) {
+      // Dynamic modal is open - restore all cursors
+      document.body.style.cursor = 'auto';
+      document.documentElement.style.cursor = 'auto';
+      
+      // Temporarily disable custom cursor styles
+      const style = document.getElementById('custom-cursor-style');
+      if (style) {
+        style.remove();
+      }
+    } else {
+      // Dynamic modal is closed - reapply custom cursor
+      document.body.style.cursor = 'none';
+      document.documentElement.style.cursor = 'none';
+    }
+  }, [isDynamicOpen]);
+
+  // Don't render custom cursor when Dynamic modal is open
+  if (isDynamicOpen) {
+    return null;
+  }
 
   return (
     <div

@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, memo } from 'react';
+import { DynamicUserProfile } from '@dynamic-labs/sdk-react-core';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { Problem } from './components/Problem';
@@ -19,7 +20,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 // Import all pages directly - no lazy loading for instant page switching
 import { DCAPage } from './pages/dca/DCAPage';
-import { MarketPage } from './pages/market';
+import { MarketListPage, TradingPage } from './pages/market';
 import { PortfolioPage } from './pages/portfolio/PortfolioPage';
 import { TransactionPage } from './pages/transaction/TransactionPage';
 import { SwapPage } from './pages/swap/SwapPage';
@@ -28,6 +29,7 @@ import { VaultPage } from './pages/vault/VaultPage';
 import { SubscriptionPage } from './pages/subscription/SubscriptionPage';
 
 type Page = 'landing' | 'dca' | 'market' | 'portfolio' | 'transactions' | 'swap' | 'deposit' | 'vault' | 'subscription';
+type TradingPair = 'BTC/USDC' | 'ETH/USDC' | 'BNB/USDC' | 'SOL/USDC' | 'XRP/USDC' | 'ADA/USDC' | 'DOGE/USDC' | 'MATIC/USDC' | 'DOT/USDC' | 'AVAX/USDC';
 
 const App = () => {
   // Initialize wallet storage manager (handles wallet-specific data isolation)
@@ -40,6 +42,7 @@ const App = () => {
   });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedTradingPair, setSelectedTradingPair] = useState<TradingPair | null>(null);
 
   // Save to localStorage whenever the page changes
   useEffect(() => {
@@ -47,6 +50,11 @@ const App = () => {
     
     // Close sidebar when changing pages
     setIsSidebarOpen(false);
+    
+    // Reset selected trading pair when leaving market page
+    if (currentPage !== 'market') {
+      setSelectedTradingPair(null);
+    }
     
     // Update body class based on current page
     if (currentPage === 'landing') {
@@ -74,8 +82,17 @@ const App = () => {
               sidebarOpen={isSidebarOpen}
             />
             <div style={{ position: 'relative', minHeight: '100vh' }}>
-              {currentPage === 'dca' && <DCAPage onSidebarToggle={setIsSidebarOpen} />}
-              {currentPage === 'market' && <MarketPage />}
+              {currentPage === 'dca' && <DCAPage />}
+              {currentPage === 'market' && (
+                selectedTradingPair ? (
+                  <TradingPage 
+                    pair={selectedTradingPair} 
+                    onBack={() => setSelectedTradingPair(null)} 
+                  />
+                ) : (
+                  <MarketListPage onSelectPair={setSelectedTradingPair} />
+                )
+              )}
               {currentPage === 'portfolio' && <PortfolioPage />}
               {currentPage === 'transactions' && <TransactionPage />}
               {currentPage === 'swap' && <SwapPage />}
@@ -111,6 +128,8 @@ const App = () => {
     <ErrorBoundary>
       {renderPage()}
       <BackgroundMusic />
+      {/* Dynamic User Profile - Required for wallet export functionality */}
+      <DynamicUserProfile variant="modal" />
     </ErrorBoundary>
   );
 };

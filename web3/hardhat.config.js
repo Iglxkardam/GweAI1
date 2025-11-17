@@ -13,7 +13,7 @@ module.exports = {
         enabled: true,
         runs: 200,
       },
-      viaIR: true, // Enable IR-based code generation for better optimization
+      viaIR: false, // Disabled for deployment compatibility
     },
   },
   networks: {
@@ -35,6 +35,11 @@ module.exports = {
       url: process.env.ABSTRACT_TESTNET_RPC || "https://api.testnet.abs.xyz",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11124,
+    },
+    baseSepolia: {
+      url: process.env.BASE_SEPOLIA_RPC || "https://sepolia.base.org",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 84532,
     },
   },
   gasReporter: {

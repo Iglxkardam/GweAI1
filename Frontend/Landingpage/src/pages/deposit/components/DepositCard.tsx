@@ -1,9 +1,8 @@
 ﻿import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaCopy, FaCheck, FaKey } from 'react-icons/fa';
+import { FaCopy, FaCheck } from 'react-icons/fa';
 import QRCode from 'react-qr-code';
 import { generateQRValue, copyToClipboard } from '../utils/format';
-import { ExportPrivateKeyModal } from './ExportPrivateKeyModal';
 
 interface DepositCardProps {
   address: string;
@@ -17,10 +16,11 @@ interface DepositCardProps {
   selectedToken?: 'ETH' | 'USDC';
   onTokenChange?: (token: 'ETH' | 'USDC') => void;
   onShowAssets?: () => void;
+  onExportKey?: () => void;
 }
 
-// USDC contract address on Abstract Testnet
-const USDC_CONTRACT_ADDRESS = '0xe4C7fBB0a626ed208021ccabA6Be1566905E2dFc'; // Abstract Testnet USDC
+// USDC contract address on Base Sepolia
+const USDC_CONTRACT_ADDRESS = '0x1ac7A0ebf13a996D5915e212900bE2d074f94988'; // Base Sepolia USDC
 
 export const DepositCard: React.FC<DepositCardProps> = ({ 
   address, 
@@ -30,12 +30,12 @@ export const DepositCard: React.FC<DepositCardProps> = ({
   symbol = 'ETH', 
   chainId = 11124,
   selectedToken = 'ETH',
-  onShowAssets
+  onShowAssets,
+  onExportKey
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
 
   // Generate QR value with proper EIP-681 format
   // For USDC, include the token contract address
@@ -195,27 +195,31 @@ export const DepositCard: React.FC<DepositCardProps> = ({
                 )}
               </div>
               
-              {/* Copy Button */}
-              <button 
-                onClick={handleCopyAddress} 
-                className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-all duration-200 active:scale-95 backdrop-blur-sm"
-              >
-                {copiedAddress ? <FaCheck className="text-white text-lg" /> : <FaCopy className="text-white text-lg" />}
-              </button>
-            </div>
-            
-            {/* Export Key Button */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowExportModal(true);
-                }}
-                className="text-white/70 hover:text-white text-sm flex items-center gap-2 font-medium transition-colors"
-                style={{ fontSmooth: 'always' }}
-              >
-                <FaKey /> Export Key
-              </button>
+              <div className="flex gap-2">
+                {/* Export Key Button */}
+                {onExportKey && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onExportKey();
+                    }}
+                    className="p-3 bg-yellow-600/20 rounded-xl hover:bg-yellow-600/30 transition-all duration-200 active:scale-95 backdrop-blur-sm border border-yellow-500/30"
+                    title="Export Private Key - Backup your wallet"
+                  >
+                    <svg className="text-yellow-400 text-lg w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </button>
+                )}
+                
+                {/* Copy Button */}
+                <button 
+                  onClick={handleCopyAddress} 
+                  className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-all duration-200 active:scale-95 backdrop-blur-sm"
+                >
+                  {copiedAddress ? <FaCheck className="text-white text-lg" /> : <FaCopy className="text-white text-lg" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -317,15 +321,6 @@ export const DepositCard: React.FC<DepositCardProps> = ({
         </div>
       </motion.div>
       <span className="sr-only">Balance: {balance} {symbol}</span>
-
-      {/* Export Private Key Modal - Portal to body for proper z-index */}
-      {showExportModal && (
-        <ExportPrivateKeyModal
-          isOpen={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          address={address}
-        />
-      )}
     </div>
   );
 };

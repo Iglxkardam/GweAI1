@@ -10,8 +10,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaWallet, FaHistory, FaSync, FaArrowRight, FaTimes } from 'react-icons/fa';
-import { StarfieldBackground } from '../../components';
+import { FaWallet, FaHistory, FaSync, FaArrowRight, FaTimes, FaPlus } from 'react-icons/fa';
+import { StarfieldBackground, NetworkSwitcher } from '../../components';
+import { useComprehensiveWallet } from '../../hooks/useComprehensiveWallet';
 import { useAgwWallet } from './hooks/useAgwWallet';
 import { WalletConnectButton } from './components/WalletConnectButton';
 import { DepositCard } from './components/DepositCard';
@@ -21,8 +22,13 @@ import { isAddress } from 'viem';
 import { useCryptoPrice } from '../../hooks/useCryptoPrice';
 
 export const DepositPage: React.FC = () => {
-  const { address, balance, ethBalance, usdcBalance, connected, loading, email, refreshBalance, sendTransaction } = useAgwWallet();
+  // Use both hooks - comprehensive for new features, AGW for compatibility
+  const walletComprehensive = useComprehensiveWallet();
+  const { address, balance, ethBalance, usdcBalance, btcBalance, connected, loading, email, refreshBalance, sendTransaction, sendToken, disconnect, exportPrivateKey, USDC_ADDRESS } = useAgwWallet();
   const { eth: ETH_PRICE, usdc: USDC_PRICE } = useCryptoPrice();
+  
+  // Multi-wallet support
+  const { userWallets, addWallet } = walletComprehensive;
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedToken, setSelectedToken] = useState<'ETH' | 'USDC'>('ETH');
@@ -126,7 +132,12 @@ export const DepositPage: React.FC = () => {
     setSending(true);
 
     try {
-      await sendTransaction(sendToAddress, sendAmount, sendTokenType);
+      // Use sendToken for USDC, sendTransaction for ETH
+      if (sendTokenType === 'USDC') {
+        await sendToken(USDC_ADDRESS, sendToAddress, sendAmount, 6);
+      } else {
+        await sendTransaction(sendToAddress, sendAmount, sendTokenType);
+      }
       
       // Reload transactions from wallet-specific localStorage immediately
       if (address) {
@@ -175,22 +186,57 @@ export const DepositPage: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="mb-8"
         >
-          <div className="flex items-center justify-center space-x-3 mb-4">
-            <FaWallet className="text-gray-300 text-3xl" />
-            <h1 className="text-4xl font-bold text-white">
-              Deposit Assets
-            </h1>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <FaWallet className="text-gray-300 text-3xl" />
+              <div>
+                <h1 className="text-4xl font-bold text-white">
+                  Deposit Assets
+                </h1>
+                <p className="text-gray-400 text-sm mt-1">
+                  Powered by Dynamic SDK with Multi-Wallet Support
+                </p>
+              </div>
+            </div>
+            
+            {/* Network Switcher & Multi-Wallet */}
+            {connected && (
+              <div className="flex items-center space-x-3">
+                <NetworkSwitcher />
+                {userWallets.length > 1 && (
+                  <div className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg">
+                    <p className="text-xs text-gray-400">Wallets</p>
+                    <p className="text-sm font-semibold text-white">{userWallets.length}</p>
+                  </div>
+                )}
+                <button
+                  onClick={addWallet}
+                  className="flex items-center space-x-2 px-4 py-2 bg-purple-600/20 border border-purple-500/50 rounded-lg hover:bg-purple-600/30 transition-all text-purple-300"
+                  title="Add another wallet"
+                >
+                  <FaPlus />
+                  <span className="text-sm">Add Wallet</span>
+                </button>
+                <button
+                  onClick={disconnect}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-600/20 border border-red-500/50 rounded-lg hover:bg-red-600/30 transition-all text-red-300"
+                  title="Disconnect wallet"
+                >
+                  <FaTimes />
+                  <span className="text-sm">Disconnect</span>
+                </button>
+              </div>
+            )}
           </div>
-          <p className="text-gray-400 text-lg mb-6">
-            Powered by Abstract Global Wallet
-          </p>
           
           {/* Wallet Connection */}
-          <div className="flex justify-center">
-            <WalletConnectButton />
-          </div>
+          {!connected && (
+            <div className="flex justify-center">
+              <WalletConnectButton />
+            </div>
+          )}
         </motion.div>
 
         {/* Main Content */}
@@ -216,6 +262,7 @@ export const DepositPage: React.FC = () => {
                   selectedToken={selectedToken}
                   onTokenChange={setSelectedToken}
                   onShowAssets={() => setShowAssets(!showAssets)}
+                  onExportKey={exportPrivateKey}
                 />
 
                 {/* Assets Panel - Slides in from right */}
@@ -316,11 +363,48 @@ export const DepositPage: React.FC = () => {
                         </div>
                       </motion.div>
 
+                      {/* BTC Asset */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/[0.08] hover:border-white/[0.12] transition-all"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center">
+                              <span className="text-xl text-white brightness-150">₿</span>
+                            </div>
+                            <div>
+                              <p className="text-white font-semibold text-lg">cbBTC</p>
+                              <p className="text-gray-400 text-xs">Coinbase Bitcoin</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-white/[0.08]">
+                          <p className="text-2xl font-bold text-white">
+                            {parseFloat(btcBalance).toFixed(6)}
+                          </p>
+                          <p className="text-sm text-gray-400 mt-1">
+                            ≈ ${(parseFloat(btcBalance) * 45000).toFixed(2)} USD
+                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              alert('BTC send coming soon!');
+                            }}
+                            className="mt-3 w-full px-4 py-2 bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.15] rounded-lg text-sm text-white font-medium transition-all duration-200"
+                          >
+                            Send
+                          </button>
+                        </div>
+                      </motion.div>
+
                       {/* Total Value */}
                       <div className="pt-4 border-t border-white/[0.08]">
                         <p className="text-gray-400 text-sm mb-1">Total Portfolio Value</p>
                         <p className="text-3xl font-bold text-white">
-                          ${((parseFloat(ethBalance) * ETH_PRICE) + (parseFloat(usdcBalance) * USDC_PRICE)).toFixed(2)}
+                          ${((parseFloat(ethBalance) * ETH_PRICE) + (parseFloat(usdcBalance) * USDC_PRICE) + (parseFloat(btcBalance) * 45000)).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -333,7 +417,7 @@ export const DepositPage: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.3 }}
               className="bg-transparent backdrop-blur-sm rounded-xl border-0 p-6 max-w-2xl mx-auto"
             >
               <div className="flex items-center justify-between mb-4">

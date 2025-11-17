@@ -132,6 +132,48 @@ class IndexedDBService {
     });
   }
 
+  // Clear wallet-specific data
+  async clearWalletData(walletAddress: string): Promise<void> {
+    await this.init();
+    const lowerAddress = walletAddress.toLowerCase();
+    
+    // Clear from all stores where wallet data might exist
+    const stores = ['wallets', 'transactions', 'chatHistory'] as (keyof DBStores)[];
+    
+    for (const storeName of stores) {
+      try {
+        const transaction = this.db!.transaction([STORES[storeName]], 'readwrite');
+        const store = transaction.objectStore(STORES[storeName]);
+        const request = store.openCursor();
+        
+        await new Promise<void>((resolve, reject) => {
+          request.onsuccess = (event) => {
+            const cursor = (event.target as IDBRequest).result;
+            if (cursor) {
+              const value = cursor.value;
+              // Check if this entry belongs to the wallet
+              if (value.walletAddress?.toLowerCase() === lowerAddress || 
+                  value.address?.toLowerCase() === lowerAddress ||
+                  value.key?.includes(lowerAddress)) {
+                cursor.delete();
+              }
+              cursor.continue();
+            } else {
+              resolve();
+            }
+          };
+          request.onerror = () => reject(request.error);
+        });
+      } catch (error) {
+        console.error(`Failed to clear ${storeName} for wallet:`, error);
+      }
+    }
+    
+    // Also clear localStorage for this wallet
+    const localStorageKey = `wallet_${lowerAddress}_transactions`;
+    localStorage.removeItem(localStorageKey);
+  }
+
   // Paginated query for large datasets
   async getPaginated<T>(
     storeName: keyof DBStores,
@@ -210,6 +252,18 @@ export const storageService = {
     } catch (error) {
       console.warn('IndexedDB failed, falling back to localStorage', error);
       localStorage.clear();
+    }
+  },
+
+  async clearWallet(walletAddress: string): Promise<void> {
+    try {
+      await indexedDBService.clearWalletData(walletAddress);
+    } catch (error) {
+      console.warn('Failed to clear wallet data from IndexedDB', error);
+      // Fallback to localStorage
+      const lowerAddress = walletAddress.toLowerCase();
+      const localStorageKey = `wallet_${lowerAddress}_transactions`;
+      localStorage.removeItem(localStorageKey);
     }
   },
 };

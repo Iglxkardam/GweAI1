@@ -10,8 +10,10 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
-    "@abstract-foundation/agw-client": "^1.10.0",
-    "@abstract-foundation/agw-react": "^1.10.0",
+    "@coinbase/wallet-sdk": "^4.3.7",
+    "@dynamic-labs/ethereum": "^4.45.1",
+    "@dynamic-labs/sdk-react-core": "^4.45.1",
+    "@dynamic-labs/wallet-connector-core": "^4.45.1",
     "@tanstack/react-query": "^5.90.6",
     "axios": "^1.13.2",
     "ccapture.js": "^1.1.0",
@@ -25,7 +27,8 @@
     "react-icons": "^5.0.1",
     "react-qr-code": "^2.0.18",
     "three": "^0.181.1",
-    "viem": "^2.38.6",
+    "valtio": "^2.2.0",
+    "viem": "^2.39.0",
     "wagmi": "^2.19.2"
   },
   "devDependencies": {

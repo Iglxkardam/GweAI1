@@ -1,13 +1,16 @@
 /**
  * Hook to manage wallet-specific storage and auto-cleanup on wallet changes
+ * Now uses Dynamic embedded wallet
  */
 
 import { useEffect, useRef } from 'react';
-import { useAccount } from 'wagmi';
+import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 import { initializeStorageManager, migrateOldStorageToWallet, cleanupOldStorage, getStorageStats } from '../utils/storageManager';
 
 export function useWalletStorageManager() {
-  const { address, isConnected } = useAccount();
+  const { primaryWallet } = useDynamicContext();
+  const address = primaryWallet?.address;
+  const authenticated = !!primaryWallet;
   const previousAddress = useRef<string | undefined>(undefined);
   const hasMigrated = useRef(false);
 
@@ -16,7 +19,7 @@ export function useWalletStorageManager() {
     initializeStorageManager(address);
 
     // If wallet just connected for the first time, try migration
-    if (isConnected && address && !hasMigrated.current) {
+    if (authenticated && address && !hasMigrated.current) {
       // Check if old global storage exists
       const hasOldData = 
         localStorage.getItem('igl_chat_conversations') ||
@@ -43,10 +46,10 @@ export function useWalletStorageManager() {
     }
 
     previousAddress.current = address;
-  }, [address, isConnected]);
+  }, [address, authenticated]);
 
   return {
     currentWallet: address,
-    isConnected
+    isConnected: authenticated
   };
 }
