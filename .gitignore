@@ -43,14 +43,19 @@ Thumbs.db
 
 # Web3 folder (contains private keys and sensitive data)
 web3/
-!web3/contracts/
-!web3/README.md
 
 # Admin folder (contains sensitive data)
 admin/
 
 # AI training data (optional)
 ai-training/
+
+# Architecture diagrams (not needed in production)
+architecture/
+
+# Root level config files (not needed)
+.env.example
+FRONTEND_CONTRACT_INTEGRATION.md
 
 # Temporary files
 *.tmp
