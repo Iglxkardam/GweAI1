@@ -44,6 +44,9 @@ Thumbs.db
 # Web3 folder (contains private keys and sensitive data)
 web3/
 
+# Arbitrage bot (private deployment)
+arbitrage-bot/
+
 # Admin folder (contains sensitive data)
 admin/
 
