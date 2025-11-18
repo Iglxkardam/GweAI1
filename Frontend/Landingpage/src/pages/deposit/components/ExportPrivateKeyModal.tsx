@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaKey, FaShieldAlt, FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 
@@ -13,8 +13,6 @@ export const ExportPrivateKeyModal: React.FC<ExportPrivateKeyModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [error] = useState<string | null>(null);
-
   const handleGetKey = () => {
     // Open Abstract's portal for private key export
     window.open('https://portal.abs.xyz/profile', '_blank');
@@ -101,17 +99,6 @@ export const ExportPrivateKeyModal: React.FC<ExportPrivateKeyModalProps> = ({
                 </p>
               </div>
             </div>
-
-              {/* Error Message */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm"
-                >
-                  {error}
-                </motion.div>
-              )}
 
               {/* Action Buttons */}
               <div className="space-y-2.5 pt-1">

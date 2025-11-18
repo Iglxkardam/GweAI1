@@ -58,7 +58,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({ asset, onUnlock, onEarlyUn
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2.5">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg flex items-center justify-center border border-white/[0.1]">
-              <span className="text-2xl text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{asset.tokenIcon}</span>
+              <img src={asset.tokenLogo} alt={asset.token} className="w-6 h-6" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-white">{asset.token}</h3>

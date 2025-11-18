@@ -5,7 +5,7 @@ import { FaLock, FaCoins, FaClock } from 'react-icons/fa';
 interface StakePool {
   id: string;
   token: string;
-  tokenIcon: string;
+  tokenLogo: string;
   apy: number;
   totalStaked: number;
   totalStakedUSD: number;
@@ -35,7 +35,7 @@ export const StakePoolCard: React.FC<StakePoolCardProps> = ({ pool, onStake }) =
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <div className="w-14 h-14 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-white/[0.1]">
-              <span className="text-3xl">{pool.tokenIcon}</span>
+              <img src={pool.tokenLogo} alt={pool.token} className="w-8 h-8" />
             </div>
             <div>
               <h3 className="text-2xl font-bold text-white">{pool.token}</h3>

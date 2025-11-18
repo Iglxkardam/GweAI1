@@ -3,6 +3,7 @@ import { FaChartLine, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { StarfieldBackground } from '../../components';
 import { useGlobalPrices } from '../../context/PriceContext';
+import { TOKENS } from '../../config/tokens';
 
 // Top 10 Crypto by Market Cap (excluding stablecoins)
 type TradingPair = 'BTC/USDC' | 'ETH/USDC' | 'XRP/USDC' | 'BNB/USDC' | 'SOL/USDC' | 'DOGE/USDC' | 'ADA/USDC' | 'TRX/USDC' | 'AVAX/USDC' | 'TON/USDC';
@@ -17,97 +18,18 @@ interface PairData {
   description: string;
 }
 
+// Generate TRADING_PAIRS from centralized token config
 const TRADING_PAIRS: Record<TradingPair, PairData> = {
-  'BTC/USDC': { 
-    symbol: 'BTC', 
-    name: 'Bitcoin', 
-    coinGeckoId: 'bitcoin', 
-    decimals: 8, 
-    tradingViewSymbol: 'BINANCE:BTCUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1.png',
-    description: '#1 by Market Cap'
-  },
-  'ETH/USDC': { 
-    symbol: 'ETH', 
-    name: 'Ethereum', 
-    coinGeckoId: 'ethereum', 
-    decimals: 18, 
-    tradingViewSymbol: 'BINANCE:ETHUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png',
-    description: '#2 by Market Cap'
-  },
-  'XRP/USDC': { 
-    symbol: 'XRP', 
-    name: 'XRP', 
-    coinGeckoId: 'ripple', 
-    decimals: 6, 
-    tradingViewSymbol: 'BINANCE:XRPUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/52.png',
-    description: '#3 by Market Cap'
-  },
-  'BNB/USDC': { 
-    symbol: 'BNB', 
-    name: 'BNB', 
-    coinGeckoId: 'binancecoin', 
-    decimals: 18, 
-    tradingViewSymbol: 'BINANCE:BNBUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png',
-    description: '#4 by Market Cap'
-  },
-  'SOL/USDC': { 
-    symbol: 'SOL', 
-    name: 'Solana', 
-    coinGeckoId: 'solana', 
-    decimals: 9, 
-    tradingViewSymbol: 'BINANCE:SOLUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png',
-    description: '#5 by Market Cap'
-  },
-  'DOGE/USDC': { 
-    symbol: 'DOGE', 
-    name: 'Dogecoin', 
-    coinGeckoId: 'dogecoin', 
-    decimals: 8, 
-    tradingViewSymbol: 'BINANCE:DOGEUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/74.png',
-    description: '#6 by Market Cap'
-  },
-  'ADA/USDC': { 
-    symbol: 'ADA', 
-    name: 'Cardano', 
-    coinGeckoId: 'cardano', 
-    decimals: 6, 
-    tradingViewSymbol: 'BINANCE:ADAUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2010.png',
-    description: '#7 by Market Cap'
-  },
-  'TRX/USDC': { 
-    symbol: 'TRX', 
-    name: 'TRON', 
-    coinGeckoId: 'tron', 
-    decimals: 6, 
-    tradingViewSymbol: 'BINANCE:TRXUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1958.png',
-    description: '#8 by Market Cap'
-  },
-  'AVAX/USDC': { 
-    symbol: 'AVAX', 
-    name: 'Avalanche', 
-    coinGeckoId: 'avalanche-2', 
-    decimals: 18, 
-    tradingViewSymbol: 'BINANCE:AVAXUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png',
-    description: '#9 by Market Cap'
-  },
-  'TON/USDC': { 
-    symbol: 'TON', 
-    name: 'Toncoin', 
-    coinGeckoId: 'the-open-network', 
-    decimals: 9, 
-    tradingViewSymbol: 'BINANCE:TONUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/11419.png',
-    description: '#10 by Market Cap'
-  }
+  'BTC/USDC': { ...TOKENS.BTC, tradingViewSymbol: TOKENS.BTC.tradingViewSymbol },
+  'ETH/USDC': { ...TOKENS.ETH, tradingViewSymbol: TOKENS.ETH.tradingViewSymbol },
+  'XRP/USDC': { ...TOKENS.XRP, tradingViewSymbol: TOKENS.XRP.tradingViewSymbol },
+  'BNB/USDC': { ...TOKENS.BNB, tradingViewSymbol: TOKENS.BNB.tradingViewSymbol },
+  'SOL/USDC': { ...TOKENS.SOL, tradingViewSymbol: TOKENS.SOL.tradingViewSymbol },
+  'DOGE/USDC': { ...TOKENS.DOGE, tradingViewSymbol: TOKENS.DOGE.tradingViewSymbol },
+  'ADA/USDC': { ...TOKENS.ADA, tradingViewSymbol: TOKENS.ADA.tradingViewSymbol },
+  'TRX/USDC': { ...TOKENS.TRX, tradingViewSymbol: TOKENS.TRX.tradingViewSymbol },
+  'AVAX/USDC': { ...TOKENS.AVAX, tradingViewSymbol: TOKENS.AVAX.tradingViewSymbol },
+  'TON/USDC': { ...TOKENS.TON, tradingViewSymbol: TOKENS.TON.tradingViewSymbol }
 };
 
 interface PairPriceData {

@@ -6,6 +6,7 @@ import { PlanCard, PurchaseModal, SubscriptionStatus } from './components';
 import { useSubscription } from './hooks/useSubscription';
 import { PlanType } from './services/contractService';
 import { FaSpinner } from 'react-icons/fa';
+import { showWarningToast } from '../../utils/toastHelper';
 
 export const SubscriptionPage: React.FC = () => {
   const {
@@ -28,7 +29,11 @@ export const SubscriptionPage: React.FC = () => {
 
   const handleSelectPlan = (plan: SubscriptionPlan) => {
     if (!isConnected) {
-      alert('Please connect your wallet first');
+      showWarningToast(
+        'Wallet Not Connected',
+        'Please connect your wallet first to purchase a subscription plan',
+        'Click "Connect Wallet" button at the top right'
+      );
       return;
     }
 
@@ -43,7 +48,11 @@ export const SubscriptionPage: React.FC = () => {
       const targetValue = planValue[plan.planType];
       
       if (targetValue < currentValue) {
-        alert('Cannot downgrade to a lower plan. Please wait for your current plan to expire.');
+        showWarningToast(
+          'Cannot Downgrade Plan',
+          'You cannot downgrade to a lower plan',
+          'Wait for your current plan to expire, then choose any plan'
+        );
         return;
       }
     }

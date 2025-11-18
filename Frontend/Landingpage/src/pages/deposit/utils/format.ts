@@ -37,7 +37,25 @@ export const formatBalanceWithSymbol = (
   symbol: string = 'ETH', 
   decimals = 4
 ): string => {
-  return `${formatBalance(balance, decimals)} ${symbol}`;
+  // Map common token symbols to their proper display names
+  const tokenNames: Record<string, string> = {
+    'ETH': 'ETH',
+    'USDC': 'USDC',
+    'BTC': 'BTC',
+    'SOL': 'SOL',
+    'BNB': 'BNB',
+    'XRP': 'XRP',
+    'TON': 'TON',
+    'AVAX': 'AVAX',
+    'TRON': 'TRX',
+    'TRX': 'TRX',
+    'CARDANO': 'ADA',
+    'ADA': 'ADA',
+    'DOGE': 'DOGE',
+  };
+  
+  const displaySymbol = tokenNames[symbol.toUpperCase()] || symbol;
+  return `${formatBalance(balance, decimals)} ${displaySymbol}`;
 };
 
 /**

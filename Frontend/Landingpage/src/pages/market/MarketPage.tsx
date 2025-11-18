@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { StarfieldBackground } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 import { useGlobalPrices } from '../../context/PriceContext';
+import { showWarningToast, showInfoToast } from '../../utils/toastHelper';
 
 // TypeScript declaration for TradingView widget
 declare global {
@@ -199,12 +200,12 @@ export const MarketPage: React.FC = () => {
 
   const handlePlaceOrder = () => {
     if (!connected) {
-      alert('Please connect your Abstract wallet first');
+      showWarningToast('Wallet Not Connected', 'Please connect your wallet first', 'Click "Connect Wallet" at the top');
       return;
     }
     
     if (!amount) {
-      alert('Please enter amount');
+      showWarningToast('Amount Required', 'Please enter amount', 'Enter the amount you want to trade');
       return;
     }
     
@@ -215,19 +216,35 @@ export const MarketPage: React.FC = () => {
       const usdcNeeded = parseFloat(amount);
       const cryptoAmount = usdcNeeded / realTimePrice;
       if (parseFloat(usdcBalance) < usdcNeeded) {
-        alert(`Insufficient USDC balance. You need ${usdcNeeded.toFixed(2)} USDC but have ${parseFloat(usdcBalance).toFixed(2)} USDC`);
+        showWarningToast(
+          'Insufficient USDC Balance',
+          `You need ${usdcNeeded.toFixed(2)} USDC but have ${parseFloat(usdcBalance).toFixed(2)} USDC`,
+          'Add more USDC to your wallet'
+        );
         return;
       }
-      alert(`BUY order placed:\nPair: ${selectedPair}\nYou Pay: ${usdcNeeded.toFixed(2)} USDC\nYou Get: ${cryptoAmount.toFixed(selectedPair === 'BTC/USDC' ? 6 : 4)} ${pairSymbol}\nPrice: ${realTimePrice.toFixed(2)} USDC\n\nWallet: ${address}\n\nExecuting via DEX smart contract...`);
+      showInfoToast(
+        'BUY Order Placed',
+        `Pair: ${selectedPair}\nYou Pay: ${usdcNeeded.toFixed(2)} USDC\nYou Get: ${cryptoAmount.toFixed(selectedPair === 'BTC/USDC' ? 6 : 4)} ${pairSymbol}\nPrice: ${realTimePrice.toFixed(2)} USDC`,
+        `Wallet: ${address} - Executing via DEX smart contract`
+      );
     } else {
       const tokenNeeded = parseFloat(amount);
       const usdcReceived = tokenNeeded * realTimePrice;
       const availableBalance = selectedPair === 'BTC/USDC' ? parseFloat(btcBalance) : selectedPair === 'ETH/USDC' ? parseFloat(ethBalance) : parseFloat(usdcBalance);
       if (availableBalance < tokenNeeded) {
-        alert(`Insufficient ${pairSymbol} balance. You need ${tokenNeeded} ${pairSymbol} but have ${availableBalance} ${pairSymbol}`);
+        showWarningToast(
+          `Insufficient ${pairSymbol} Balance`,
+          `You need ${tokenNeeded} ${pairSymbol} but have ${availableBalance} ${pairSymbol}`,
+          'Add more tokens to your wallet'
+        );
         return;
       }
-      alert(`SELL order placed:\nPair: ${selectedPair}\nYou Sell: ${tokenNeeded} ${pairSymbol}\nYou Receive: ${usdcReceived.toFixed(2)} USDC\nPrice: ${realTimePrice.toFixed(2)} USDC\n\nWallet: ${address}\n\nExecuting via DEX smart contract...`);
+      showInfoToast(
+        'SELL Order Placed',
+        `Pair: ${selectedPair}\nYou Sell: ${tokenNeeded} ${pairSymbol}\nYou Receive: ${usdcReceived.toFixed(2)} USDC\nPrice: ${realTimePrice.toFixed(2)} USDC`,
+        `Wallet: ${address} - Executing via DEX smart contract`
+      );
     }
     
     setAmount('');

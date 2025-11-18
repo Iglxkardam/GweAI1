@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import type { PublicClient, WalletClient } from 'viem';
 
 // Deployed contract address on Base Sepolia (NEW TREASURY)
-export const SUBSCRIPTION_CONTRACT_ADDRESS = '0x1e758DB9F2BbC33b4F3e8411FEbF9CE03c638194';
+export const SUBSCRIPTION_CONTRACT_ADDRESS = '0xcFbdEaba321700A9C125b41dB6bBd6BBBA752287';
 
 // USDC token address on Base Sepolia (MockUSDC - VERIFIED)
 export const USDC_TOKEN_ADDRESS = '0xBEE08798a3634e29F47e3d277C9d11507D55F66a';

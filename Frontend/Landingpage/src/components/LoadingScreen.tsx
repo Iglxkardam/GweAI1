@@ -5,7 +5,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export const LoadingScreen: React.FC = () => {
+interface LoadingScreenProps {
+  message?: string;
+}
+
+export const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = 'Loading ...' }) => {
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       {/* Animated dots */}
@@ -30,7 +34,7 @@ export const LoadingScreen: React.FC = () => {
         </div>
         
         <motion.p
-          className="text-gray-400 text-sm"
+          className="text-gray-400 text-sm font-medium"
           animate={{
             opacity: [0.5, 1, 0.5],
           }}
@@ -40,7 +44,7 @@ export const LoadingScreen: React.FC = () => {
             ease: "easeInOut"
           }}
         >
-          Loading ...
+          {message}
         </motion.p>
       </div>
     </div>

@@ -4,24 +4,55 @@ import { FaWallet, FaChartLine, FaArrowUp, FaCog } from 'react-icons/fa';
 import { StarfieldBackground, PerformanceChart } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 import { useGlobalPrices } from '../../context/PriceContext';
+import { TOKENS } from '../../config/tokens';
 
 export const PortfolioPage: React.FC = () => {
-  const { ethBalance, usdcBalance, btcBalance, connected, address } = useAgwWallet();
+  const { 
+    ethBalance, usdcBalance, btcBalance, solBalance, bnbBalance,
+    xrpBalance, tonBalance, avaxBalance, tronBalance, cardanoBalance, dogeBalance,
+    connected, address 
+  } = useAgwWallet();
   const { prices } = useGlobalPrices();
   const ETH_PRICE = prices.eth || 0;
   const USDC_PRICE = 1;
   const BTC_PRICE = prices.btc || 0;
+  const SOL_PRICE = prices.sol || 139;
+  const BNB_PRICE = prices.bnb || 931;
+  const XRP_PRICE = prices.xrp || 2.21;
+  const TON_PRICE = 1.80;
+  const AVAX_PRICE = 14.73;
+  const TRON_PRICE = 0.29;
+  const CARDANO_PRICE = prices.ada || 0.47;
+  const DOGE_PRICE = prices.doge || 0.16;
   
   const totalValue = useMemo(() => {
     const ethValue = parseFloat(ethBalance) * ETH_PRICE;
     const usdcValue = parseFloat(usdcBalance) * USDC_PRICE;
     const btcValue = parseFloat(btcBalance) * BTC_PRICE;
-    return ethValue + usdcValue + btcValue;
-  }, [ethBalance, usdcBalance, btcBalance, ETH_PRICE, USDC_PRICE, BTC_PRICE]);
+    const solValue = parseFloat(solBalance) * SOL_PRICE;
+    const bnbValue = parseFloat(bnbBalance) * BNB_PRICE;
+    const xrpValue = parseFloat(xrpBalance) * XRP_PRICE;
+    const tonValue = parseFloat(tonBalance) * TON_PRICE;
+    const avaxValue = parseFloat(avaxBalance) * AVAX_PRICE;
+    const tronValue = parseFloat(tronBalance) * TRON_PRICE;
+    const cardanoValue = parseFloat(cardanoBalance) * CARDANO_PRICE;
+    const dogeValue = parseFloat(dogeBalance) * DOGE_PRICE;
+    return ethValue + usdcValue + btcValue + solValue + bnbValue + xrpValue + tonValue + avaxValue + tronValue + cardanoValue + dogeValue;
+  }, [ethBalance, usdcBalance, btcBalance, solBalance, bnbBalance, xrpBalance, tonBalance, avaxBalance, tronBalance, cardanoBalance, dogeBalance, ETH_PRICE, USDC_PRICE, BTC_PRICE, SOL_PRICE, BNB_PRICE, XRP_PRICE, TON_PRICE, AVAX_PRICE, TRON_PRICE, CARDANO_PRICE, DOGE_PRICE]);
 
-  const ethValue = useMemo(() => parseFloat(ethBalance) * ETH_PRICE, [ethBalance, ETH_PRICE]);
-  const usdcValue = useMemo(() => parseFloat(usdcBalance) * USDC_PRICE, [usdcBalance, USDC_PRICE]);
-  const btcValue = useMemo(() => parseFloat(btcBalance) * BTC_PRICE, [btcBalance, BTC_PRICE]);
+  const tokenHoldings = useMemo(() => [
+    { symbol: TOKENS.BTC.symbol, name: TOKENS.BTC.name, balance: btcBalance, price: BTC_PRICE, logo: TOKENS.BTC.logo, color: TOKENS.BTC.color },
+    { symbol: TOKENS.ETH.symbol, name: TOKENS.ETH.name, balance: ethBalance, price: ETH_PRICE, logo: TOKENS.ETH.logo, color: TOKENS.ETH.color },
+    { symbol: TOKENS.SOL.symbol, name: TOKENS.SOL.name, balance: solBalance, price: SOL_PRICE, logo: TOKENS.SOL.logo, color: TOKENS.SOL.color },
+    { symbol: TOKENS.BNB.symbol, name: TOKENS.BNB.name, balance: bnbBalance, price: BNB_PRICE, logo: TOKENS.BNB.logo, color: TOKENS.BNB.color },
+    { symbol: TOKENS.XRP.symbol, name: TOKENS.XRP.name, balance: xrpBalance, price: XRP_PRICE, logo: TOKENS.XRP.logo, color: TOKENS.XRP.color },
+    { symbol: TOKENS.TON.symbol, name: TOKENS.TON.name, balance: tonBalance, price: TON_PRICE, logo: TOKENS.TON.logo, color: TOKENS.TON.color },
+    { symbol: TOKENS.AVAX.symbol, name: TOKENS.AVAX.name, balance: avaxBalance, price: AVAX_PRICE, logo: TOKENS.AVAX.logo, color: TOKENS.AVAX.color },
+    { symbol: TOKENS.TRX.symbol, name: TOKENS.TRX.name, balance: tronBalance, price: TRON_PRICE, logo: TOKENS.TRX.logo, color: TOKENS.TRX.color },
+    { symbol: TOKENS.ADA.symbol, name: TOKENS.ADA.name, balance: cardanoBalance, price: CARDANO_PRICE, logo: TOKENS.ADA.logo, color: TOKENS.ADA.color },
+    { symbol: TOKENS.DOGE.symbol, name: TOKENS.DOGE.name, balance: dogeBalance, price: DOGE_PRICE, logo: TOKENS.DOGE.logo, color: TOKENS.DOGE.color },
+    { symbol: TOKENS.USDC.symbol, name: TOKENS.USDC.name, balance: usdcBalance, price: USDC_PRICE, logo: TOKENS.USDC.logo, color: TOKENS.USDC.color },
+  ].filter(token => parseFloat(token.balance) > 0), [ethBalance, usdcBalance, btcBalance, solBalance, bnbBalance, xrpBalance, tonBalance, avaxBalance, tronBalance, cardanoBalance, dogeBalance, ETH_PRICE, USDC_PRICE, BTC_PRICE, SOL_PRICE, BNB_PRICE, XRP_PRICE, TON_PRICE, AVAX_PRICE, TRON_PRICE, CARDANO_PRICE, DOGE_PRICE]);
 
   return (
     <div 
@@ -117,68 +148,33 @@ export const PortfolioPage: React.FC = () => {
           <div className="p-4 sm:p-6">
             {connected ? (
               <div className="space-y-3 sm:space-y-4">
-                {/* Ethereum */}
-                {parseFloat(ethBalance) > 0 && (
-                  <div className="flex items-center justify-between p-3 sm:p-4 bg-white/[0.03] rounded-lg sm:rounded-xl border border-white/[0.08] hover:border-white/[0.12] transition-all duration-200">
-                    <div className="flex items-center space-x-3 sm:space-x-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400/20 to-blue-500/20 border border-blue-500/20 rounded-full flex items-center justify-center">
-                        <span className="text-blue-400 font-bold text-base sm:text-lg">Ξ</span>
+                {tokenHoldings.length > 0 ? (
+                  tokenHoldings.map((token) => {
+                    const value = parseFloat(token.balance) * token.price;
+                    
+                    return (
+                      <div key={token.symbol} className="flex items-center justify-between p-3 sm:p-4 bg-white/[0.03] rounded-lg sm:rounded-xl border border-white/[0.08] hover:border-white/[0.12] transition-all duration-200">
+                        <div className="flex items-center space-x-3 sm:space-x-4">
+                          <img src={token.logo} alt={token.symbol} className="w-10 h-10 sm:w-12 sm:h-12" />
+                          <div>
+                            <h3 className="font-semibold text-white text-sm sm:text-base">{token.name}</h3>
+                            <p className="text-xs sm:text-sm text-gray-400">
+                              {parseFloat(token.balance).toFixed(token.symbol === 'USDC' ? 2 : token.symbol === 'BTC' ? 6 : 4)} {token.symbol}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-white text-sm sm:text-base">${value.toFixed(2)}</p>
+                          <p className="text-xs sm:text-sm text-gray-400">@ ${token.price.toLocaleString()}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-white text-sm sm:text-base">Ethereum</h3>
-                        <p className="text-xs sm:text-sm text-gray-400">{parseFloat(ethBalance).toFixed(4)} ETH</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-white text-sm sm:text-base">${ethValue.toFixed(2)}</p>
-                      <p className="text-xs sm:text-sm text-gray-400">@ ${ETH_PRICE}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* USDC */}
-                {parseFloat(usdcBalance) > 0 && (
-                  <div className="flex items-center justify-between p-3 sm:p-4 bg-white/[0.03] rounded-lg sm:rounded-xl border border-white/[0.08] hover:border-white/[0.12] transition-all duration-200">
-                    <div className="flex items-center space-x-3 sm:space-x-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400/20 to-green-500/20 border border-green-500/20 rounded-full flex items-center justify-center">
-                        <span className="text-green-400 font-bold text-base sm:text-lg">$</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white text-sm sm:text-base">USDC</h3>
-                        <p className="text-xs sm:text-sm text-gray-400">{parseFloat(usdcBalance).toFixed(2)} USDC</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-white text-sm sm:text-base">${usdcValue.toFixed(2)}</p>
-                      <p className="text-xs sm:text-sm text-gray-400">@ ${USDC_PRICE}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Bitcoin */}
-                {parseFloat(btcBalance) > 0 && (
-                  <div className="flex items-center justify-between p-3 sm:p-4 bg-white/[0.03] rounded-lg sm:rounded-xl border border-white/[0.08] hover:border-white/[0.12] transition-all duration-200">
-                    <div className="flex items-center space-x-3 sm:space-x-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-400/20 to-orange-500/20 border border-orange-500/20 rounded-full flex items-center justify-center">
-                        <span className="text-orange-400 font-bold text-base sm:text-lg">₿</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white text-sm sm:text-base">Bitcoin</h3>
-                        <p className="text-xs sm:text-sm text-gray-400">{parseFloat(btcBalance).toFixed(6)} BTC</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-white text-sm sm:text-base">${btcValue.toFixed(2)}</p>
-                      <p className="text-xs sm:text-sm text-gray-400">@ ${BTC_PRICE.toLocaleString()}</p>
-                    </div>
-                  </div>
-                )}
-
-                {parseFloat(ethBalance) === 0 && parseFloat(usdcBalance) === 0 && parseFloat(btcBalance) === 0 && (
+                    );
+                  })
+                ) : (
                   <div className="text-center py-8">
                     <FaWallet className="text-4xl text-gray-500 mx-auto mb-3" />
                     <p className="text-gray-400">No assets in your wallet</p>
-                    <p className="text-sm text-gray-500 mt-2">Deposit ETH, USDC or BTC to get started</p>
+                    <p className="text-sm text-gray-500 mt-2">Deposit tokens to get started</p>
                   </div>
                 )}
               </div>

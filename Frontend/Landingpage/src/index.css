@@ -11,10 +11,8 @@
   body {
     @apply text-white font-sans antialiased;
     background: #000;
-    /* Prevent flash on reload */
     min-height: 100vh;
     overflow-x: hidden;
-    /* Ensure default cursor is always visible */
     cursor: auto;
   }
   
@@ -55,9 +53,9 @@
   }
   
   .glass {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
   /* Performance optimizations for animations */
@@ -94,163 +92,32 @@
       will-change: auto;
     }
   }
-  
-  /* Add shimmer animation for skeletons */
-  @keyframes shimmer {
-    0% {
-      background-position: -1000px 0;
-    }
-    100% {
-      background-position: 1000px 0;
-    }
-  }
-  
-  .animate-shimmer {
-    animation: shimmer 2s infinite linear;
-    background: linear-gradient(
-      to right,
-      #374151 0%,
-      #4b5563 20%,
-      #374151 40%,
-      #374151 100%
-    );
-    background-size: 1000px 100%;
-  }
 }
 
-/* Custom scrollbar styles for chat history sidebar */
+/* Custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 10px;
   transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
-}
-
-/* Glitch text animation for AI responses */
-@keyframes glitch-text {
-  0%, 100% {
-    content: attr(data-text);
-    opacity: 1;
-  }
-  10% {
-    content: var(--char-0);
-    opacity: 0.8;
-  }
-  20% {
-    content: var(--char-1);
-    opacity: 0.6;
-  }
-  30% {
-    content: var(--char-2);
-    opacity: 0.8;
-  }
-  40% {
-    content: var(--char-3);
-    opacity: 0.9;
-  }
-  50% {
-    content: var(--char-4);
-    opacity: 0.7;
-  }
-  60% {
-    content: var(--char-5);
-    opacity: 0.8;
-  }
-  70% {
-    content: var(--char-6);
-    opacity: 0.9;
-  }
-  80% {
-    content: var(--char-7);
-    opacity: 0.85;
-  }
-  90% {
-    content: var(--char-8);
-    opacity: 0.95;
-  }
-}
-
-.glitch-char {
-  animation: glitch-text calc(var(--count) * 0.2s) ease-in-out;
-  animation-iteration-count: 1;
-}
-
-.glitch-char::before {
-  content: attr(data-text);
-  position: absolute;
-  left: 0;
-  animation: glitch-text calc(var(--count) * 0.15s) ease-in-out;
-  animation-iteration-count: 1;
-  text-shadow: 2px 0 rgba(16, 185, 129, 0.5);
-}
-
-.glitch-char::after {
-  content: attr(data-text);
-  position: absolute;
-  left: 0;
-  animation: glitch-text calc(var(--count) * 0.25s) ease-in-out;
-  animation-iteration-count: 1;
-  text-shadow: -2px 0 rgba(139, 92, 246, 0.5);
-}
-
-/* Custom cursor styles */
-.cursor {
-  pointer-events: none !important;
-  z-index: 9999 !important;
-  position: fixed !important;
-}
-
-/* Different blend modes for different backgrounds */
-body:not(.landing-page) .cursor {
-  mix-blend-mode: screen;
-}
-
-body.landing-page .cursor {
-  mix-blend-mode: normal;
-}
-
-/* Ensure smooth cursor movement */
-.cursor svg {
-  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
-}
-
-/* Adjust cursor shadow based on theme */
-body.landing-page .cursor svg {
-  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
-}
-
-/* Click effect animation */
-@keyframes ping {
-  0% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  75%, 100% {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-
-.animate-ping {
-  animation: ping 0.3s cubic-bezier(0, 0, 0.2, 1);
+  scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255, 255, 255, 0.02);
 }
 
 /* Ensure proper cursor styles for interactive elements */
@@ -308,3 +175,18 @@ footer {
   }
 }
 
+/* Toast animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}

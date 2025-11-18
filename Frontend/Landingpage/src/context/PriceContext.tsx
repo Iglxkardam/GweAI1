@@ -95,23 +95,52 @@ export const PriceProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     let isMounted = true;
     let retryCount = 0;
     const maxRetries = 3;
+    const REQUEST_TIMEOUT = 8000; // 8 second timeout per request
+
+    // Fetch with timeout wrapper
+    const fetchWithTimeout = (url: string, timeout = REQUEST_TIMEOUT) => {
+      return Promise.race([
+        fetch(url),
+        new Promise<Response>((_, reject) =>
+          setTimeout(() => reject(new Error('Request timeout')), timeout)
+        ),
+      ]);
+    };
+
+    // Batch fetch to avoid rate limits (fetch 3-4 at a time)
+    const batchFetchPrices = async (symbols: [string, string][], batchSize = 3) => {
+      const results: any[] = [];
+      
+      for (let i = 0; i < symbols.length; i += batchSize) {
+        const batch = symbols.slice(i, i + batchSize);
+        const batchResults = await Promise.allSettled(
+          batch.map(([, symbol]) =>
+            fetchWithTimeout(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
+              .then(res => res.ok ? res.json() : null)
+              .catch(() => null)
+          )
+        );
+        
+        results.push(...batchResults.map(r => r.status === 'fulfilled' ? r.value : null));
+        
+        // Small delay between batches to avoid rate limiting
+        if (i + batchSize < symbols.length) {
+          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+        }
+      }
+      
+      return results;
+    };
 
     const fetchPricesFromBinance = async () => {
       // Prevent concurrent fetches
       if (!isMounted) return;
 
       try {
-        // Fetch all crypto prices in parallel from Binance (no CORS, no rate limits)
         const symbols = Object.entries(BINANCE_SYMBOLS);
-        const responses = await Promise.all(
-          symbols.map(([, symbol]) =>
-            fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
-              .then(res => res.json())
-              .catch(() => null)
-          )
-        );
+        const responses = await batchFetchPrices(symbols);
 
-        if (!isMounted) return; // Check again after async operation
+        if (!isMounted) return;
 
         const newPrices: Partial<CryptoPrices> = { usdc: 1, usdt: 1 };
         const newChanges: Partial<PriceChange> = {};
@@ -124,20 +153,24 @@ export const PriceProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           }
         });
 
-        // Only update if we got valid data
-        if (isMounted && Object.keys(newPrices).length > 2) {
+        // Only update if we got valid data for at least 50% of tokens
+        if (isMounted && Object.keys(newPrices).length > 5) {
           setPrices(prev => ({ ...prev, ...newPrices }));
           setPriceChanges(prev => ({ ...prev, ...newChanges }));
           setLastUpdate(Date.now());
           setLoading(false);
-          retryCount = 0; // Reset retry count on success
+          retryCount = 0;
+          console.log(`✅ Fetched prices for ${Object.keys(newPrices).length} tokens`);
+        } else if (isMounted) {
+          console.warn(`⚠️ Only got ${Object.keys(newPrices).length} prices, keeping previous data`);
         }
       } catch (error) {
         console.error('Binance price fetch error:', error);
         if (isMounted && retryCount < maxRetries) {
           retryCount++;
-          // Exponential backoff: 3s, 6s, 12s
-          setTimeout(() => isMounted && fetchPricesFromBinance(), 3000 * Math.pow(2, retryCount - 1));
+          const retryDelay = Math.min(3000 * Math.pow(2, retryCount - 1), 15000); // Cap at 15s
+          console.log(`⏱️ Retrying in ${retryDelay/1000}s (attempt ${retryCount}/${maxRetries})`);
+          setTimeout(() => isMounted && fetchPricesFromBinance(), retryDelay);
         }
         setLoading(false);
       }

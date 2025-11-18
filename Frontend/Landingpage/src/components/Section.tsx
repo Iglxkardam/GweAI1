@@ -13,8 +13,8 @@ export const Section: React.FC<SectionProps> = ({
   gradient = false,
   id 
 }) => {
-  const baseStyles = 'py-16 md:py-24 px-4 sm:px-6 lg:px-8';
-  const backgroundStyles = gradient ? 'bg-gradient-hero animate-gradient' : 'bg-white';
+  const baseStyles = 'px-4 sm:px-6 lg:px-8';
+  const backgroundStyles = gradient ? 'bg-gradient-hero animate-gradient' : '';
   
   return (
     <section id={id} className={`${baseStyles} ${backgroundStyles} ${className}`}>

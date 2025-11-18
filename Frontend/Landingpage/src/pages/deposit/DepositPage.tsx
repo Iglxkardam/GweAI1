@@ -21,43 +21,76 @@ import type { Transaction } from './types/wallet.types';
 import { isAddress } from 'viem';
 import { useGlobalPrices } from '../../context/PriceContext';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
+import { TOKENS } from '../../config/tokens';
+import { preloadWalletClient } from '../../utils/walletPreloader';
+import { showErrorToast } from '../../utils/toastHelper';
 
 export const DepositPage: React.FC = () => {
-  const { address, balance, ethBalance, usdcBalance, btcBalance, connected, loading, email, refreshBalance, sendTransaction, sendToken, disconnect, exportPrivateKey, USDC_ADDRESS } = useAgwWallet();
+  const { 
+    address, balance, ethBalance, usdcBalance, btcBalance, solBalance, bnbBalance,
+    xrpBalance, tonBalance, avaxBalance, tronBalance, cardanoBalance, dogeBalance,
+    connected, loading, email, refreshBalance, sendTransaction, sendToken, disconnect, exportPrivateKey,
+    USDC_ADDRESS, BTC_ADDRESS, SOL_ADDRESS, BNB_ADDRESS, XRP_ADDRESS, TON_ADDRESS,
+    AVAX_ADDRESS, TRON_ADDRESS, CARDANO_ADDRESS, DOGE_ADDRESS
+  } = useAgwWallet();
   const { prices } = useGlobalPrices();
   const ETH_PRICE = prices.eth || 0;
   const USDC_PRICE = 1;
   const BTC_PRICE = prices.btc || 0;
-  const { showAuthFlow } = useDynamicContext();
+  const SOL_PRICE = prices.sol || 139;
+  const BNB_PRICE = prices.bnb || 931;
+  const XRP_PRICE = prices.xrp || 2.21;
+  const TON_PRICE = 1.80;
+  const AVAX_PRICE = 14.73;
+  const TRON_PRICE = 0.29;
+  const CARDANO_PRICE = prices.ada || 0.47;
+  const DOGE_PRICE = prices.doge || 0.16;
+  const { showAuthFlow, primaryWallet } = useDynamicContext();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedToken, setSelectedToken] = useState<'ETH' | 'USDC'>('ETH');
   const [showAssets, setShowAssets] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendToAddress, setSendToAddress] = useState('');
   const [sendAmount, setSendAmount] = useState('');
-  const [sendTokenType, setSendTokenType] = useState<'ETH' | 'USDC'>('ETH');
+  const [sendTokenType, setSendTokenType] = useState<'ETH' | 'USDC' | 'BTC' | 'SOL' | 'BNB' | 'XRP' | 'TON' | 'AVAX' | 'TRON' | 'CARDANO' | 'DOGE'>('ETH');
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState('');
+  
+  // Pagination constants
+  const ITEMS_PER_PAGE = 5;
+  const totalPages = Math.ceil(transactions.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentTransactions = transactions.slice(startIndex, endIndex);
   
   // Local state to track wallet connection process
   const [isConnecting, setIsConnecting] = useState(false);
   
-  // Stop loading once address is available OR if auth flow closes without connection
+  // Stop loading once address is available (wallet fully created)
   useEffect(() => {
     if (address) {
-      // Immediately stop loading when address is available
+      console.log('[DepositPage] ✅ Wallet ready, address available:', address);
       setIsConnecting(false);
     }
   }, [address]);
 
-  // Stop loading if auth flow is closed but no wallet connected
+  // Monitor wallet creation progress
   useEffect(() => {
-    if (!showAuthFlow && isConnecting && !connected) {
+    if (connected && !address) {
+      console.log('[DepositPage] ⏳ Wallet connected but address not ready yet (creating wallet)...');
+      // Keep showing loading
+    }
+  }, [connected, address]);
+
+  // Stop loading only if auth flow is closed AND user didn't authenticate
+  useEffect(() => {
+    if (!showAuthFlow && isConnecting && !connected && !address) {
       // Auth flow closed without connecting, stop loading
+      console.log('[DepositPage] ❌ Auth flow closed without connection, stopping loading');
       setIsConnecting(false);
     }
-  }, [showAuthFlow, isConnecting, connected]);
+  }, [showAuthFlow, isConnecting, connected, address]);
 
   // Listen for wallet connection cancellation
   useEffect(() => {
@@ -72,6 +105,7 @@ export const DepositPage: React.FC = () => {
   useEffect(() => {
     if (!address) {
       setTransactions([]);
+      setCurrentPage(1); // Reset to first page
       return;
     }
 
@@ -85,11 +119,16 @@ export const DepositPage: React.FC = () => {
         if (storedTxs && isMounted) {
           const txs = JSON.parse(storedTxs);
           setTransactions(txs);
+          setCurrentPage(1); // Reset to first page when transactions change
         } else if (isMounted) {
           setTransactions([]);
+          setCurrentPage(1);
         }
       } catch (error) {
-        if (isMounted) setTransactions([]);
+        if (isMounted) {
+          setTransactions([]);
+          setCurrentPage(1);
+        }
       }
     };
 
@@ -124,9 +163,14 @@ export const DepositPage: React.FC = () => {
             new Map(allTxs.map(tx => [tx.txHash, tx])).values()
           );
           
+          // Sort by timestamp (newest first) and keep only last 20
+          const sortedTxs = uniqueTxs
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+            .slice(0, 20);
+          
           if (isMounted) {
-            setTransactions(uniqueTxs);
-            localStorage.setItem(storageKey, JSON.stringify(uniqueTxs));
+            setTransactions(sortedTxs);
+            localStorage.setItem(storageKey, JSON.stringify(sortedTxs));
           }
         }
       } catch (error) {
@@ -154,32 +198,45 @@ export const DepositPage: React.FC = () => {
   };
 
   const handleSend = async () => {
-    setSendError('');
-    
     if (!isAddress(sendToAddress)) {
-      setSendError('Invalid wallet address');
+      showErrorToast(new Error('Invalid wallet address'));
       return;
     }
 
     if (!sendAmount || parseFloat(sendAmount) <= 0) {
-      setSendError('Invalid amount');
+      showErrorToast(new Error('Invalid amount'));
       return;
     }
 
-    const balance = sendTokenType === 'ETH' ? ethBalance : usdcBalance;
-    if (parseFloat(sendAmount) > parseFloat(balance)) {
-      setSendError(`Insufficient ${sendTokenType} balance`);
+    // Get balance and token config based on type (VERIFIED from blockchain)
+    const tokenConfig: Record<typeof sendTokenType, { balance: string; address?: string; decimals: number }> = {
+      ETH: { balance: ethBalance, decimals: 18 },
+      USDC: { balance: usdcBalance, address: USDC_ADDRESS, decimals: 6 },
+      BTC: { balance: btcBalance, address: BTC_ADDRESS, decimals: 8 },
+      SOL: { balance: solBalance, address: SOL_ADDRESS, decimals: 9 },
+      BNB: { balance: bnbBalance, address: BNB_ADDRESS, decimals: 18 },
+      XRP: { balance: xrpBalance, address: XRP_ADDRESS, decimals: 6 },
+      TON: { balance: tonBalance, address: TON_ADDRESS, decimals: 9 },
+      AVAX: { balance: avaxBalance, address: AVAX_ADDRESS, decimals: 18 },
+      TRON: { balance: tronBalance, address: TRON_ADDRESS, decimals: 6 },
+      CARDANO: { balance: cardanoBalance, address: CARDANO_ADDRESS, decimals: 6 },
+      DOGE: { balance: dogeBalance, address: DOGE_ADDRESS, decimals: 8 },
+    };
+    
+    const config = tokenConfig[sendTokenType];
+    if (parseFloat(sendAmount) > parseFloat(config.balance)) {
+      showErrorToast(new Error(`Insufficient ${sendTokenType} balance`));
       return;
     }
 
     setSending(true);
 
     try {
-      // Use sendToken for USDC, sendTransaction for ETH
-      if (sendTokenType === 'USDC') {
-        await sendToken(USDC_ADDRESS, sendToAddress, sendAmount, 6);
+      // Use sendToken for ERC20 tokens, sendTransaction for ETH
+      if (sendTokenType === 'ETH') {
+        await sendTransaction(sendToAddress, sendAmount, 'ETH');
       } else {
-        await sendTransaction(sendToAddress, sendAmount, sendTokenType);
+        await sendToken(config.address!, sendToAddress, sendAmount, config.decimals);
       }
       
       // Reload transactions from wallet-specific localStorage immediately
@@ -205,17 +262,37 @@ export const DepositPage: React.FC = () => {
       
       await refreshBalance();
     } catch (error: any) {
-      setSendError(error.message || 'Transaction failed');
+      showErrorToast(error);
     } finally {
       setSending(false);
     }
   };
 
   // Show loading if SDK is loading OR connecting process started but card not ready
-  const showLoading = useMemo(() => 
-    loading || (isConnecting && !address),
-    [loading, isConnecting, address]
-  );
+  // CRITICAL: Wait for address to be available, not just connected state
+  const showLoading = useMemo(() => {
+    // Loading during initial SDK load
+    if (loading) return true;
+    
+    // Loading when user clicked connect but address not ready yet
+    if (isConnecting && !address) return true;
+    
+    // Loading when connected is true but address still being created (new user)
+    if (connected && !address) return true;
+    
+    return false;
+  }, [loading, isConnecting, address, connected]);
+  
+  // Dynamic loading message based on state
+  const loadingMessage = useMemo(() => {
+    if (connected && !address) {
+      return 'Creating your wallet ...';
+    }
+    if (isConnecting) {
+      return 'Connecting wallet ...';
+    }
+    return 'Loading ...';
+  }, [connected, address, isConnecting]);
 
   return (
     <div 
@@ -230,8 +307,8 @@ export const DepositPage: React.FC = () => {
     >
       <StarfieldBackground optimized={true} />
       
-      {/* Loading overlay */}
-      {showLoading && <LoadingScreen />}
+      {/* Loading overlay with dynamic message */}
+      {showLoading && <LoadingScreen message={loadingMessage} />}
       
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Header */}
@@ -274,7 +351,7 @@ export const DepositPage: React.FC = () => {
               transition={{ delay: 0.1 }}
               className="mb-12 relative"
             >
-              <div className="flex justify-center items-start gap-6">
+              <div className="flex flex-col items-center gap-6">
                 {/* Main Card - Centered */}
                 <DepositCard
                   address={address}
@@ -304,7 +381,7 @@ export const DepositPage: React.FC = () => {
                     ease: [0.4, 0, 0.2, 1]
                   }}
                   style={{ display: showAssets ? 'block' : 'none' }}
-                  className="w-80"
+                  className="w-full max-w-5xl"
                 >
                   <div className="bg-transparent backdrop-blur-sm rounded-2xl p-6 border-0">
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
@@ -312,127 +389,81 @@ export const DepositPage: React.FC = () => {
                       Your Assets
                     </h3>
                     
-                    <div className="space-y-4">
-                      {/* ETH Asset */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/[0.08] hover:border-white/[0.12] transition-all"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center">
-                              <span className="text-xl text-white brightness-150">Ξ</span>
-                            </div>
-                            <div>
-                              <p className="text-white font-semibold text-lg">ETH</p>
-                              <p className="text-gray-400 text-xs">Ethereum</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-white/[0.08]">
-                          <p className="text-2xl font-bold text-white">
-                            {parseFloat(ethBalance).toFixed(4)}
-                          </p>
-                          <p className="text-sm text-gray-400 mt-1">
-                            ≈ ${(parseFloat(ethBalance) * ETH_PRICE).toFixed(2)} USD
-                          </p>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSendTokenType('ETH');
-                              setShowSendModal(true);
-                            }}
-                            className="mt-3 w-full px-4 py-2 bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.15] rounded-lg text-sm text-white font-medium transition-all duration-200"
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {[
+                        { symbol: TOKENS.ETH.symbol, name: TOKENS.ETH.name, balance: ethBalance, price: ETH_PRICE, logo: TOKENS.ETH.logo, decimals: 4, canSend: true },
+                        { symbol: TOKENS.BTC.symbol, name: TOKENS.BTC.name, balance: btcBalance, price: BTC_PRICE, logo: TOKENS.BTC.logo, decimals: 6, canSend: true },
+                        { symbol: TOKENS.SOL.symbol, name: TOKENS.SOL.name, balance: solBalance, price: SOL_PRICE, logo: TOKENS.SOL.logo, decimals: 4, canSend: true },
+                        { symbol: TOKENS.BNB.symbol, name: TOKENS.BNB.name, balance: bnbBalance, price: BNB_PRICE, logo: TOKENS.BNB.logo, decimals: 6, canSend: true },
+                        { symbol: TOKENS.XRP.symbol, name: TOKENS.XRP.name, balance: xrpBalance, price: XRP_PRICE, logo: TOKENS.XRP.logo, decimals: 4, canSend: true },
+                        { symbol: TOKENS.TON.symbol, name: TOKENS.TON.name, balance: tonBalance, price: TON_PRICE, logo: TOKENS.TON.logo, decimals: 4, canSend: true },
+                        { symbol: TOKENS.AVAX.symbol, name: TOKENS.AVAX.name, balance: avaxBalance, price: AVAX_PRICE, logo: TOKENS.AVAX.logo, decimals: 4, canSend: true },
+                        { symbol: TOKENS.TRX.symbol, name: TOKENS.TRX.name, balance: tronBalance, price: TRON_PRICE, logo: TOKENS.TRX.logo, decimals: 4, canSend: true },
+                        { symbol: TOKENS.ADA.symbol, name: TOKENS.ADA.name, balance: cardanoBalance, price: CARDANO_PRICE, logo: TOKENS.ADA.logo, decimals: 4, canSend: true },
+                        { symbol: TOKENS.DOGE.symbol, name: TOKENS.DOGE.name, balance: dogeBalance, price: DOGE_PRICE, logo: TOKENS.DOGE.logo, decimals: 4, canSend: true },
+                        { symbol: TOKENS.USDC.symbol, name: TOKENS.USDC.name, balance: usdcBalance, price: USDC_PRICE, logo: TOKENS.USDC.logo, decimals: 2, canSend: true },
+                      ]
+                        .filter(token => parseFloat(token.balance) > 0)
+                        .map((token, index) => (
+                          <motion.div
+                            key={token.symbol}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/[0.08] hover:border-white/[0.12] transition-all"
                           >
-                            Send
-                          </button>
-                        </div>
-                      </motion.div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <img src={token.logo} alt={token.symbol} className="w-10 h-10" />
+                                <div>
+                                  <p className="text-white font-semibold text-lg">{token.symbol}</p>
+                                  <p className="text-gray-400 text-xs">{token.name}</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-white/[0.08]">
+                              <p className="text-2xl font-bold text-white">
+                                {parseFloat(token.balance).toFixed(token.decimals)}
+                              </p>
+                              <p className="text-sm text-gray-400 mt-1">
+                                ≈ ${(parseFloat(token.balance) * token.price).toFixed(2)} USD
+                              </p>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSendTokenType(token.symbol as any);
+                                  setShowSendModal(true);
+                                }}
+                                onMouseEnter={() => preloadWalletClient(primaryWallet)}
+                                onFocus={() => preloadWalletClient(primaryWallet)}
+                                className="mt-3 w-full px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.15] hover:border-white/[0.25] rounded-lg text-sm text-white font-semibold transition-all duration-200"
+                              >
+                                Send
+                              </button>
+                            </div>
+                          </motion.div>
+                        ))
+                      }
+                    </div>
 
-                      {/* USDC Asset */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/[0.08] hover:border-white/[0.12] transition-all"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center">
-                              <span className="text-xl text-white brightness-150">$</span>
-                            </div>
-                            <div>
-                              <p className="text-white font-semibold text-lg">USDC</p>
-                              <p className="text-gray-400 text-xs">USD Coin</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-white/[0.08]">
-                          <p className="text-2xl font-bold text-white">
-                            {parseFloat(usdcBalance).toFixed(2)}
-                          </p>
-                          <p className="text-sm text-gray-400 mt-1">
-                            ≈ ${parseFloat(usdcBalance).toFixed(2)} USD
-                          </p>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSendTokenType('USDC');
-                              setShowSendModal(true);
-                            }}
-                            className="mt-3 w-full px-4 py-2 bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.15] rounded-lg text-sm text-white font-medium transition-all duration-200"
-                          >
-                            Send
-                          </button>
-                        </div>
-                      </motion.div>
-
-                      {/* BTC Asset */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/[0.08] hover:border-white/[0.12] transition-all"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center">
-                              <span className="text-xl text-white brightness-150">₿</span>
-                            </div>
-                            <div>
-                              <p className="text-white font-semibold text-lg">BTC</p>
-                              <p className="text-gray-400 text-xs">Bitcoin</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-white/[0.08]">
-                          <p className="text-2xl font-bold text-white">
-                            {parseFloat(btcBalance).toFixed(6)}
-                          </p>
-                          <p className="text-sm text-gray-400 mt-1">
-                            ≈ ${(parseFloat(btcBalance) * BTC_PRICE).toFixed(2)} USD
-                          </p>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              alert('BTC send coming soon!');
-                            }}
-                            className="mt-3 w-full px-4 py-2 bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.15] rounded-lg text-sm text-white font-medium transition-all duration-200"
-                          >
-                            Send
-                          </button>
-                        </div>
-                      </motion.div>
-
-                      {/* Total Value */}
-                      <div className="pt-4 border-t border-white/[0.08]">
-                        <p className="text-gray-400 text-sm mb-1">Total Portfolio Value</p>
-                        <p className="text-3xl font-bold text-white">
-                          ${((parseFloat(ethBalance) * ETH_PRICE) + (parseFloat(usdcBalance) * USDC_PRICE) + (parseFloat(btcBalance) * BTC_PRICE)).toFixed(2)}
-                        </p>
-                      </div>
+                    {/* Total Value */}
+                    <div className="pt-4 mt-6 border-t border-white/[0.08]">
+                      <p className="text-gray-400 text-sm mb-1">Total Portfolio Value</p>
+                      <p className="text-3xl font-bold text-white">
+                        ${(
+                          (parseFloat(ethBalance) * ETH_PRICE) +
+                          (parseFloat(btcBalance) * BTC_PRICE) +
+                          (parseFloat(solBalance) * SOL_PRICE) +
+                          (parseFloat(bnbBalance) * BNB_PRICE) +
+                          (parseFloat(xrpBalance) * XRP_PRICE) +
+                          (parseFloat(tonBalance) * TON_PRICE) +
+                          (parseFloat(avaxBalance) * AVAX_PRICE) +
+                          (parseFloat(tronBalance) * TRON_PRICE) +
+                          (parseFloat(cardanoBalance) * CARDANO_PRICE) +
+                          (parseFloat(dogeBalance) * DOGE_PRICE) +
+                          (parseFloat(usdcBalance) * USDC_PRICE)
+                        ).toFixed(2)}
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -462,8 +493,9 @@ export const DepositPage: React.FC = () => {
               </div>
 
               {transactions.length > 0 ? (
-                <div className="space-y-3">
-                  {transactions.slice(0, 5).map((tx, index) => {
+                <>
+                  <div className="space-y-2">
+                    {currentTransactions.map((tx, index) => {
                     // Ensure type and status have default values
                     const txType = tx.type || 'deposit';
                     const txStatus = tx.status || 'pending';
@@ -474,7 +506,7 @@ export const DepositPage: React.FC = () => {
                         href={getExplorerUrl(tx.txHash, 11124, 'tx')}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-4 bg-white/[0.03] rounded-lg border border-white/[0.08] hover:border-white/[0.12] transition-colors"
+                        className="flex items-center justify-between p-3 bg-white/[0.03] rounded-lg border border-white/[0.08] hover:border-white/[0.12] transition-colors"
                       >
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
@@ -504,7 +536,46 @@ export const DepositPage: React.FC = () => {
                       </a>
                     );
                   })}
-                </div>
+                  </div>
+                  
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/[0.08]">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                          currentPage === 1
+                            ? 'bg-white/[0.03] text-gray-500 cursor-not-allowed'
+                            : 'bg-white/[0.08] text-white hover:bg-white/[0.12]'
+                        }`}
+                      >
+                        Previous
+                      </button>
+                      
+                      <div className="flex items-center space-x-2">
+                        <span className="text-gray-400 text-sm">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <span className="text-gray-500 text-xs">
+                          ({transactions.length} total)
+                        </span>
+                      </div>
+                      
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                          currentPage === totalPages
+                            ? 'bg-white/[0.03] text-gray-500 cursor-not-allowed'
+                            : 'bg-white/[0.08] text-white hover:bg-white/[0.12]'
+                        }`}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-gray-400">No deposit history yet</p>
@@ -601,7 +672,12 @@ export const DepositPage: React.FC = () => {
                     />
                     <button
                       onClick={() => {
-                        const balance = sendTokenType === 'ETH' ? ethBalance : usdcBalance;
+                        const balances: Record<typeof sendTokenType, string> = {
+                          ETH: ethBalance, USDC: usdcBalance, BTC: btcBalance, SOL: solBalance,
+                          BNB: bnbBalance, XRP: xrpBalance, TON: tonBalance, AVAX: avaxBalance,
+                          TRON: tronBalance, CARDANO: cardanoBalance, DOGE: dogeBalance
+                        };
+                        const balance = balances[sendTokenType];
                         setSendAmount(balance);
                       }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.15] rounded-lg text-xs text-white font-medium transition-all"
@@ -610,20 +686,16 @@ export const DepositPage: React.FC = () => {
                     </button>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    Balance: {sendTokenType === 'ETH' ? ethBalance : parseFloat(usdcBalance).toFixed(2)} {sendTokenType}
+                    Balance: {(() => {
+                      const balances: Record<typeof sendTokenType, string> = {
+                        ETH: ethBalance, USDC: usdcBalance, BTC: btcBalance, SOL: solBalance,
+                        BNB: bnbBalance, XRP: xrpBalance, TON: tonBalance, AVAX: avaxBalance,
+                        TRON: tronBalance, CARDANO: cardanoBalance, DOGE: dogeBalance
+                      };
+                      return parseFloat(balances[sendTokenType]).toFixed(sendTokenType === 'USDC' ? 2 : sendTokenType === 'ETH' ? 4 : sendTokenType === 'BTC' ? 6 : 4);
+                    })()} {sendTokenType}
                   </p>
                 </div>
-
-                {/* Error Message */}
-                {sendError && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm"
-                  >
-                    {sendError}
-                  </motion.div>
-                )}
 
                 {/* Send Button */}
                 <button

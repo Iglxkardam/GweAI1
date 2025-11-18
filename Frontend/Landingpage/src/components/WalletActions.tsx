@@ -43,18 +43,15 @@ export const WalletActions: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [txStatus, setTxStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const [txHash, setTxHash] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
   
   // Handle send transaction
   const handleSend = async () => {
     if (!recipient || !amount) {
-      setErrorMessage('Please enter recipient and amount');
       return;
     }
     
     try {
       setTxStatus('pending');
-      setErrorMessage('');
       
       let result;
       
@@ -90,7 +87,6 @@ export const WalletActions: React.FC = () => {
     } catch (error: any) {
       console.error('Send failed:', error);
       setTxStatus('error');
-      setErrorMessage(error.message || 'Transaction failed');
     }
   };
   
@@ -100,7 +96,6 @@ export const WalletActions: React.FC = () => {
     setTxStatus('idle');
     setRecipient('');
     setAmount('');
-    setErrorMessage('');
   };
   
   if (!connected) {
@@ -226,13 +221,6 @@ export const WalletActions: React.FC = () => {
                           className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
                         />
                       </div>
-                      
-                      {/* Error Message */}
-                      {errorMessage && (
-                        <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-                          <p className="text-sm text-red-400">{errorMessage}</p>
-                        </div>
-                      )}
                       
                       {/* Send Button */}
                       <button

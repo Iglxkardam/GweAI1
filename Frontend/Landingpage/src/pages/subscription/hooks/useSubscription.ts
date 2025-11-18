@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 import { encodeFunctionData } from 'viem';
 import {
@@ -10,6 +10,9 @@ import {
   USDC_TOKEN_ADDRESS,
   ERC20_ABI,
 } from '../services/contractService';
+import { logError } from '../../../utils/errorHandler';
+import { showErrorToast } from '../../../utils/toastHelper';
+import { validateTransaction, logSecurityEvent } from '../../../config/contracts';
 
 interface SubscriptionData {
   planType: PlanType;
@@ -67,6 +70,22 @@ export function useSubscription(): UseSubscriptionReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // OPTIMIZATION: Cache wallet client for instant popup
+  const walletClientRef = useRef<any>(null);
+  
+  // Preload wallet client on mount
+  useEffect(() => {
+    if (primaryWallet) {
+      (primaryWallet as any).getWalletClient?.().then((client: any) => {
+        if (client) {
+          walletClientRef.current = client;
+          console.log('[useSubscription] ✅ Wallet client preloaded');
+        }
+      }).catch(() => {});
+    }
+    return () => { walletClientRef.current = null; };
+  }, [primaryWallet]);
 
   const fetchSubscriptionData = async (forceRefresh = false) => {
     if (!address || !isConnected || !primaryWallet) {
@@ -230,15 +249,24 @@ export function useSubscription(): UseSubscriptionReturn {
     setError(null);
 
     try {
-      // Get wallet client from Dynamic SDK - wait for iframe to be ready
+      // OPTIMIZATION: Use cached wallet client or fetch
       console.log('[useSubscription] 🔄 Getting wallet client...');
-      const walletClient = await (primaryWallet as any).getWalletClient?.();
+      let walletClient = walletClientRef.current;
+      
+      if (!walletClient) {
+        console.log('[useSubscription] ⚡ Fetching wallet client (not cached)...');
+        walletClient = await (primaryWallet as any).getWalletClient?.();
+        if (walletClient) {
+          walletClientRef.current = walletClient;
+          console.log('[useSubscription] ✅ Wallet client cached for future use');
+        }
+      } else {
+        console.log('[useSubscription] ✅ Using cached wallet client (instant)');
+      }
       
       if (!walletClient) {
         throw new Error('Could not get wallet client - please try reconnecting your wallet');
       }
-      
-      console.log('[useSubscription] ✅ Wallet client ready');
       
       // Check current subscription state first
       console.log('[useSubscription] 🔍 Checking current subscription state...');
@@ -278,6 +306,28 @@ export function useSubscription(): UseSubscriptionReturn {
       
       console.log('[useSubscription] 💳 Starting purchase flow for plan:', planType);
       console.log('[useSubscription] 💰 Price:', price.toString(), 'USDC');
+      
+      // SECURITY: Validate subscription contract before transaction
+      const validation = await validateTransaction({
+        contractAddress: SUBSCRIPTION_CONTRACT_ADDRESS as `0x${string}`,
+        contractType: 'SUBSCRIPTION',
+        userAddress: address as `0x${string}`,
+      });
+      
+      if (!validation.valid) {
+        logSecurityEvent({
+          type: 'ERROR',
+          details: validation.error || 'Subscription contract validation failed',
+          address: SUBSCRIPTION_CONTRACT_ADDRESS,
+        });
+        throw new Error(validation.error || 'Contract validation failed');
+      }
+      
+      logSecurityEvent({
+        type: 'CONTRACT_CALL',
+        details: `Subscription purchase initiated - Plan: ${planType}`,
+        address: SUBSCRIPTION_CONTRACT_ADDRESS,
+      });
       
       onProgress?.('approving');
       
@@ -430,27 +480,18 @@ export function useSubscription(): UseSubscriptionReturn {
         subscriptionCache.delete(address.toLowerCase());
       }
       await fetchSubscriptionData();
-    } catch (err) {
+    } catch (err: any) {
+      logError('PurchaseSubscription', err);
+      
       console.error('[useSubscription] ❌ Error purchasing subscription:', err);
       onProgress?.('error');
       
-      // Handle user rejection gracefully
-      if (err instanceof Error) {
-        if (err.message.includes('user rejected') || 
-            err.message.includes('User rejected') ||
-            err.message.includes('user denied') ||
-            err.message.includes('User denied')) {
-          setError('Transaction cancelled by user');
-        } else if (err.message.includes('insufficient funds')) {
-          setError('Insufficient USDC balance');
-        } else if (err.message.includes('Iframe') || err.message.includes('contentWindow')) {
-          setError('Wallet popup not ready - please try again');
-        } else {
-          setError(err.message);
-        }
-      } else {
-        setError('Failed to purchase subscription. Please try again.');
-      }
+      setError(err.message || 'Failed to purchase subscription');
+      
+      // Show user-friendly toast
+      showErrorToast(err);
+      
+      throw err;
       
       throw err;
     } finally {

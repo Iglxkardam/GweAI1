@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaCreditCard, FaMobileAlt } from 'react-icons/fa';
+import { showWarningToast, showSuccessToast } from '../../../utils/toastHelper';
 
 interface BuyUSDCModalProps {
   isOpen: boolean;
@@ -45,18 +46,18 @@ export const BuyUSDCModal: React.FC<BuyUSDCModalProps> = ({ isOpen, onClose }) =
 
   const handlePurchase = async () => {
     if (!inrAmount || parseFloat(inrAmount) <= 0) {
-      alert('Please enter a valid amount');
+      showWarningToast('Invalid Amount', 'Please enter a valid amount', 'Enter a positive number');
       return;
     }
 
     if (paymentMethod === 'upi' && !upiId) {
-      alert('Please enter your UPI ID');
+      showWarningToast('UPI ID Required', 'Please enter your UPI ID', 'Enter your UPI ID to continue');
       return;
     }
 
     if (paymentMethod === 'card') {
       if (!cardNumber || !cardExpiry || !cardCvv || !cardName) {
-        alert('Please fill in all card details');
+        showWarningToast('Card Details Required', 'Please fill in all card details', 'Complete all card fields');
         return;
       }
     }
@@ -66,7 +67,7 @@ export const BuyUSDCModal: React.FC<BuyUSDCModalProps> = ({ isOpen, onClose }) =
     // Simulate processing
     setTimeout(() => {
       setProcessing(false);
-      alert(`Purchase successful! You will receive ${usdcAmount} USDC`);
+      showSuccessToast('Purchase Successful', `You will receive ${usdcAmount} USDC`, 'USDC will be credited to your wallet');
       onClose();
       // Reset form
       setInrAmount('');

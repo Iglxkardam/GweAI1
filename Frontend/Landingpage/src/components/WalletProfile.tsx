@@ -19,13 +19,11 @@ import {
   FaExternalLinkAlt, 
   FaPlus,
   FaCheck,
-  FaEthereum,
-  FaBitcoin,
-  FaDollarSign,
   FaChevronDown,
   FaChevronUp,
 } from 'react-icons/fa';
 import { useComprehensiveWallet } from '../hooks/useComprehensiveWallet';
+import { TOKENS } from '../config/tokens';
 
 export const WalletProfile: React.FC = () => {
   const {
@@ -62,16 +60,11 @@ export const WalletProfile: React.FC = () => {
   
   // Get token icon
   const getTokenIcon = (symbol: string) => {
-    switch (symbol) {
-      case 'ETH':
-        return <FaEthereum className="text-purple-400" />;
-      case 'BTC':
-        return <FaBitcoin className="text-orange-400" />;
-      case 'USDC':
-        return <FaDollarSign className="text-blue-400" />;
-      default:
-        return <FaWallet className="text-gray-400" />;
+    const token = Object.values(TOKENS).find(t => t.symbol === symbol);
+    if (token) {
+      return <img src={token.logo} alt={symbol} className="w-5 h-5" />;
     }
+    return <FaWallet className="w-5 h-5 text-gray-400" />;
   };
   
   if (!connected) {

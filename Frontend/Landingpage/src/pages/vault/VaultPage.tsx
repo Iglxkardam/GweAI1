@@ -5,6 +5,8 @@ import { StarfieldBackground } from '../../components';
 import { VaultCard, EarlyUnlockModal, StakePoolCard, LockAssetModal } from './components';
 import { LockedAsset, VaultStats, VaultFilter, StakePool } from './types/vault.types';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
+import { showInfoToast } from '../../utils/toastHelper';
+import { TOKENS } from '../../config/tokens';
 
 type VaultTab = 'locked' | 'unlocked' | 'pools';
 
@@ -42,7 +44,7 @@ export const VaultPage: React.FC = () => {
       {
         id: 'eth-pool',
         token: 'ETH',
-        tokenIcon: 'Ξ',
+        tokenLogo: TOKENS.ETH.logo,
         apy: 12.0,
         totalStaked: ethStakes.reduce((sum, s) => sum + s.amount, 0),
         totalStakedUSD: ethStakes.reduce((sum, s) => sum + s.usdValue, 0),
@@ -53,7 +55,7 @@ export const VaultPage: React.FC = () => {
       {
         id: 'usdc-pool',
         token: 'USDC',
-        tokenIcon: '$',
+        tokenLogo: TOKENS.USDC.logo,
         apy: 8.0,
         totalStaked: usdcStakes.reduce((sum, s) => sum + s.amount, 0),
         totalStakedUSD: usdcStakes.reduce((sum, s) => sum + s.usdValue, 0),
@@ -120,7 +122,7 @@ export const VaultPage: React.FC = () => {
 
   const handleUnlock = (id: string) => {
     console.log('Unlocking vault:', id);
-    alert(`Claiming ${id}...`);
+    showInfoToast('Claiming Asset', `Claiming ${id}...`, 'Please wait while we process your claim');
     // Implement unlock logic
   };
 
@@ -134,7 +136,7 @@ export const VaultPage: React.FC = () => {
 
   const handleEarlyUnlockConfirm = (assetId: string) => {
     console.log('Early unlocking vault:', assetId);
-    alert(`Early unlock confirmed for ${assetId}. Penalty applied.`);
+    showInfoToast('Early Unlock Confirmed', `Early unlock confirmed for ${assetId}`, 'Penalty applied');
     // Implement early unlock logic with penalty
   };
 
@@ -218,7 +220,7 @@ export const VaultPage: React.FC = () => {
       const newStake: LockedAsset = {
         id: `stake-${Date.now()}`,
         token: token,
-        tokenIcon: pool.tokenIcon,
+        tokenLogo: pool.tokenLogo,
         amount: amount,
         usdValue: amount * tokenPrice,
         lockDate: now.getTime(),

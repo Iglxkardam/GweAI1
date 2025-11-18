@@ -20,9 +20,9 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
     alias: {
-      react: path.resolve('./node_modules/react'),
-      'react-dom': path.resolve('./node_modules/react-dom'),
-      'react/jsx-runtime': path.resolve('./node_modules/react/jsx-runtime'),
+      'react': path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
+      'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime'),
     },
   },
   build: {
@@ -84,11 +84,16 @@ export default defineConfig({
       'react/jsx-runtime',
     ],
     exclude: ['@abstract-foundation/agw-client'],
-    // Force optimization even in dev
-    force: true,
+    // Ensure single React instance
+    esbuildOptions: {
+      resolveExtensions: ['.ts', '.tsx', '.js', '.jsx'],
+      mainFields: ['module', 'main'],
+    },
   },
   // Performance improvements
   server: {
+    port: 5176,
+    strictPort: false,
     hmr: {
       overlay: false
     },

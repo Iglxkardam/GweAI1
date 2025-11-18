@@ -4,6 +4,11 @@ import { motion } from 'framer-motion';
 import { StarfieldBackground } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 import { useGlobalPrices } from '../../context/PriceContext';
+import { BuyPanel, SellPanel } from './components';
+import { useMarketPrices } from './hooks/useMarketPrices';
+import { SUPPORTED_TOKENS } from '../deposit/hooks/useAgwWallet';
+import { useRecentTrades } from './hooks/useRecentTrades';
+import { getPublicClient } from '../../utils/rpcProvider';
 
 // TypeScript declaration for TradingView widget
 declare global {
@@ -13,6 +18,8 @@ declare global {
 }
 
 // Top 10 Crypto by Market Cap (excluding stablecoins)
+import { TOKENS } from '../../config/tokens';
+
 type TradingPair = 'BTC/USDC' | 'ETH/USDC' | 'XRP/USDC' | 'BNB/USDC' | 'SOL/USDC' | 'DOGE/USDC' | 'ADA/USDC' | 'TRX/USDC' | 'AVAX/USDC' | 'TON/USDC';
 
 interface PairData {
@@ -24,87 +31,35 @@ interface PairData {
   logo: string;
 }
 
+// Generate TRADING_PAIRS from centralized token config
 const TRADING_PAIRS: Record<TradingPair, PairData> = {
-  'BTC/USDC': { 
-    symbol: 'BTC', 
-    name: 'Bitcoin', 
-    coinGeckoId: 'bitcoin', 
-    decimals: 8, 
-    tradingViewSymbol: 'BINANCE:BTCUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1.png'
-  },
-  'ETH/USDC': { 
-    symbol: 'ETH', 
-    name: 'Ethereum', 
-    coinGeckoId: 'ethereum', 
-    decimals: 18, 
-    tradingViewSymbol: 'BINANCE:ETHUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png'
-  },
-  'XRP/USDC': { 
-    symbol: 'XRP', 
-    name: 'XRP', 
-    coinGeckoId: 'ripple', 
-    decimals: 6, 
-    tradingViewSymbol: 'BINANCE:XRPUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/52.png'
-  },
-  'BNB/USDC': { 
-    symbol: 'BNB', 
-    name: 'BNB', 
-    coinGeckoId: 'binancecoin', 
-    decimals: 18, 
-    tradingViewSymbol: 'BINANCE:BNBUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png'
-  },
-  'SOL/USDC': { 
-    symbol: 'SOL', 
-    name: 'Solana', 
-    coinGeckoId: 'solana', 
-    decimals: 9, 
-    tradingViewSymbol: 'BINANCE:SOLUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png'
-  },
-  'DOGE/USDC': { 
-    symbol: 'DOGE', 
-    name: 'Dogecoin', 
-    coinGeckoId: 'dogecoin', 
-    decimals: 8, 
-    tradingViewSymbol: 'BINANCE:DOGEUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/74.png'
-  },
-  'ADA/USDC': { 
-    symbol: 'ADA', 
-    name: 'Cardano', 
-    coinGeckoId: 'cardano', 
-    decimals: 6, 
-    tradingViewSymbol: 'BINANCE:ADAUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2010.png'
-  },
-  'TRX/USDC': { 
-    symbol: 'TRX', 
-    name: 'TRON', 
-    coinGeckoId: 'tron', 
-    decimals: 6, 
-    tradingViewSymbol: 'BINANCE:TRXUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1958.png'
-  },
-  'AVAX/USDC': { 
-    symbol: 'AVAX', 
-    name: 'Avalanche', 
-    coinGeckoId: 'avalanche-2', 
-    decimals: 18, 
-    tradingViewSymbol: 'BINANCE:AVAXUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png'
-  },
-  'TON/USDC': { 
-    symbol: 'TON', 
-    name: 'Toncoin', 
-    coinGeckoId: 'the-open-network', 
-    decimals: 9, 
-    tradingViewSymbol: 'BINANCE:TONUSDT', 
-    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/11419.png'
-  }
+  'BTC/USDC': { ...TOKENS.BTC, tradingViewSymbol: TOKENS.BTC.tradingViewSymbol },
+  'ETH/USDC': { ...TOKENS.ETH, tradingViewSymbol: TOKENS.ETH.tradingViewSymbol },
+  'XRP/USDC': { ...TOKENS.XRP, tradingViewSymbol: TOKENS.XRP.tradingViewSymbol },
+  'BNB/USDC': { ...TOKENS.BNB, tradingViewSymbol: TOKENS.BNB.tradingViewSymbol },
+  'SOL/USDC': { ...TOKENS.SOL, tradingViewSymbol: TOKENS.SOL.tradingViewSymbol },
+  'DOGE/USDC': { ...TOKENS.DOGE, tradingViewSymbol: TOKENS.DOGE.tradingViewSymbol },
+  'ADA/USDC': { ...TOKENS.ADA, tradingViewSymbol: TOKENS.ADA.tradingViewSymbol },
+  'TRX/USDC': { ...TOKENS.TRX, tradingViewSymbol: TOKENS.TRX.tradingViewSymbol },
+  'AVAX/USDC': { ...TOKENS.AVAX, tradingViewSymbol: TOKENS.AVAX.tradingViewSymbol },
+  'TON/USDC': { ...TOKENS.TON, tradingViewSymbol: TOKENS.TON.tradingViewSymbol }
+};
+
+// Helper function to map trading pair symbols to SUPPORTED_TOKENS keys
+const getTokenKey = (symbol: string): keyof typeof SUPPORTED_TOKENS | null => {
+  const symbolMap: Record<string, keyof typeof SUPPORTED_TOKENS | null> = {
+    'BTC': 'BTC',
+    'ETH': null, // ETH not deployed - no token available
+    'SOL': 'SOL',
+    'BNB': 'BNB',
+    'XRP': 'XRP',
+    'TON': 'TON',
+    'AVAX': 'AVAX',
+    'TRX': 'TRON', // TRX maps to TRON
+    'ADA': 'CARDANO', // ADA maps to CARDANO
+    'DOGE': 'DOGE',
+  };
+  return symbolMap[symbol] || null;
 };
 
 interface TradingPageProps {
@@ -113,23 +68,51 @@ interface TradingPageProps {
 }
 
 export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onBack }) => {
-  const { ethBalance, usdcBalance, btcBalance, connected, address } = useAgwWallet();
+  const { 
+    ethBalance, 
+    usdcBalance, 
+    btcBalance, 
+    solBalance,
+    bnbBalance,
+    xrpBalance,
+    tonBalance,
+    avaxBalance,
+    tronBalance,
+    cardanoBalance,
+    dogeBalance,
+    connected,
+    address,
+    refreshBalance
+  } = useAgwWallet();
   const { prices, priceChanges } = useGlobalPrices();
+  const { prices: marketPrices } = useMarketPrices();
   
   const [selectedPair, setSelectedPair] = useState<TradingPair>(initialPair || 'BTC/USDC');
   const [isLoading, setIsLoading] = useState(true);
   const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
-  const [price, setPrice] = useState('');
-  const [amount, setAmount] = useState('');
   const [realTimePrice, setRealTimePrice] = useState(0);
   const [priceChange24h, setPriceChange24h] = useState(0);
-  const [recentTrades, setRecentTrades] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const tradesPerPage = 10;
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [successTxHash, setSuccessTxHash] = useState('');
   
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const widgetInstanceRef = useRef<any>(null);
   const scriptLoadedRef = useRef(false);
+
+  // Get current token data
+  const currentPairData = TRADING_PAIRS[selectedPair];
+  const tokenKey = getTokenKey(currentPairData.symbol);
+  const tokenAddress = tokenKey && SUPPORTED_TOKENS[tokenKey] ? SUPPORTED_TOKENS[tokenKey].address : null;
+
+  // Fetch real trades from blockchain - only user's trades
+  const { trades: recentTrades, loading: tradesLoading, refetch: refetchTrades } = useRecentTrades(
+    tokenAddress || '0x0000000000000000000000000000000000000000',
+    currentPairData.symbol,
+    currentPairData.decimals,
+    connected && address ? address : undefined // Only fetch user trades if connected
+  );
 
   // Update selected pair when prop changes
   useEffect(() => {
@@ -138,28 +121,63 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
     }
   }, [initialPair]);
 
-  // Load TradingView script once
+  // Load TradingView script once with timeout and retry
   useEffect(() => {
     if (scriptLoadedRef.current) return;
 
-    setIsLoading(true);
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/tv.js';
-    script.async = true;
-    script.onload = () => {
-      scriptLoadedRef.current = true;
-      setIsLoading(false);
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    const LOAD_TIMEOUT = 15000; // 15 seconds
+
+    const loadScript = () => {
+      setIsLoading(true);
+      const script = document.createElement('script');
+      script.src = 'https://s3.tradingview.com/tv.js';
+      script.async = true;
+      
+      // Timeout handler
+      const timeoutId = setTimeout(() => {
+        console.error('TradingView script load timeout');
+        script.remove();
+        
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          console.log(`Retrying TradingView script load (${retryCount}/${MAX_RETRIES})...`);
+          setTimeout(loadScript, 2000); // Retry after 2 seconds
+        } else {
+          setIsLoading(false);
+          console.error('Failed to load TradingView after retries');
+        }
+      }, LOAD_TIMEOUT);
+      
+      script.onload = () => {
+        clearTimeout(timeoutId);
+        scriptLoadedRef.current = true;
+        setIsLoading(false);
+        console.log('✅ TradingView script loaded successfully');
+      };
+      
+      script.onerror = () => {
+        clearTimeout(timeoutId);
+        console.error('TradingView script load error');
+        script.remove();
+        
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          console.log(`Retrying TradingView script load (${retryCount}/${MAX_RETRIES})...`);
+          setTimeout(loadScript, 2000);
+        } else {
+          setIsLoading(false);
+        }
+      };
+      
+      document.head.appendChild(script);
     };
-    script.onerror = () => {
-      console.error('Failed to load TradingView script');
-      setIsLoading(false);
-    };
-    document.head.appendChild(script);
+
+    loadScript();
 
     return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
+      // Cleanup handled by retry logic
     };
   }, []);
 
@@ -196,6 +214,8 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
         save_image: false,
         container_id: 'tradingview_widget',
         backgroundColor: 'rgba(0, 0, 0, 0)',
+        disabled_features: ['use_localstorage_for_settings'],
+        enabled_features: ['study_templates'],
         overrides: {
           'paneProperties.background': 'rgba(0, 0, 0, 0)',
           'paneProperties.backgroundType': 'solid',
@@ -230,45 +250,14 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
     
     if (globalPrice > 0) {
       setRealTimePrice(globalPrice);
-      setPrice(globalPrice.toFixed(2));
       setPriceChange24h(parseFloat(globalChange.toFixed(2)));
     }
   }, [selectedPair, prices, priceChanges]);
 
-  // Fetch recent trades
+  // Reset to first page when switching pairs
   useEffect(() => {
-    const fetchRecentTrades = async () => {
-      try {
-        const mockTrades = Array.from({ length: 25 }, (_, i) => {
-          const timestamp = Date.now() - (i * 60000 * Math.random() * 10);
-          const isBuy = Math.random() > 0.5;
-          const basePrice = realTimePrice || 3000;
-          const priceVariation = (Math.random() - 0.5) * basePrice * 0.002;
-          const tradePrice = basePrice + priceVariation;
-          const amount = Math.random() * (selectedPair === 'BTC/USDC' ? 0.5 : 5);
-          
-          return {
-            id: `trade-${i}-${timestamp}`,
-            price: tradePrice,
-            amount: amount,
-            total: tradePrice * amount,
-            time: new Date(timestamp),
-            type: isBuy ? 'buy' : 'sell'
-          };
-        });
-        
-        setRecentTrades(mockTrades);
-      } catch (error) {
-        console.error('Error fetching recent trades:', error);
-      }
-    };
-
-    if (realTimePrice > 0) {
-      fetchRecentTrades();
-      const interval = setInterval(fetchRecentTrades, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [selectedPair, realTimePrice]);
+    setCurrentPage(1);
+  }, [selectedPair]);
 
   const indexOfLastTrade = currentPage * tradesPerPage;
   const indexOfFirstTrade = indexOfLastTrade - tradesPerPage;
@@ -277,41 +266,6 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
-  };
-
-  const handlePlaceOrder = () => {
-    if (!connected) {
-      alert('Please connect your wallet first (MetaMask, WalletConnect, or Coinbase)');
-      return;
-    }
-    
-    if (!amount) {
-      alert('Please enter amount');
-      return;
-    }
-    
-    const pairSymbol = TRADING_PAIRS[selectedPair].symbol;
-    
-    if (orderType === 'buy') {
-      const usdcNeeded = parseFloat(amount);
-      const cryptoAmount = usdcNeeded / realTimePrice;
-      if (parseFloat(usdcBalance) < usdcNeeded) {
-        alert(`Insufficient USDC balance. You need ${usdcNeeded.toFixed(2)} USDC but have ${parseFloat(usdcBalance).toFixed(2)} USDC`);
-        return;
-      }
-      alert(`BUY order placed:\nPair: ${selectedPair}\nYou Pay: ${usdcNeeded.toFixed(2)} USDC\nYou Get: ${cryptoAmount.toFixed(selectedPair === 'BTC/USDC' ? 6 : 4)} ${pairSymbol}\nPrice: ${realTimePrice.toFixed(2)} USDC\n\nWallet: ${address}\n\nExecuting via DEX smart contract...`);
-    } else {
-      const tokenNeeded = parseFloat(amount);
-      const usdcReceived = tokenNeeded * realTimePrice;
-      const availableBalance = selectedPair === 'BTC/USDC' ? parseFloat(btcBalance) : selectedPair === 'ETH/USDC' ? parseFloat(ethBalance) : parseFloat(usdcBalance);
-      if (availableBalance < tokenNeeded) {
-        alert(`Insufficient ${pairSymbol} balance. You need ${tokenNeeded} ${pairSymbol} but have ${availableBalance} ${pairSymbol}`);
-        return;
-      }
-      alert(`SELL order placed:\nPair: ${selectedPair}\nYou Sell: ${tokenNeeded} ${pairSymbol}\nYou Receive: ${usdcReceived.toFixed(2)} USDC\nPrice: ${realTimePrice.toFixed(2)} USDC\n\nWallet: ${address}\n\nExecuting via DEX smart contract...`);
-    }
-    
-    setAmount('');
   };
 
   return (
@@ -445,111 +399,113 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
                 </button>
               </div>
 
-              {/* Price Input */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Price (USDC)</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder={realTimePrice.toFixed(2)}
-                    className="w-full px-4 py-3.5 bg-black/40 border border-white/20 rounded-xl text-white text-base placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300"
-                  />
-                  <button
-                    onClick={() => setPrice(realTimePrice.toFixed(2))}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 text-xs font-semibold bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-all"
-                  >
-                    Market
-                  </button>
-                </div>
-              </div>
-
-              {/* Amount Input */}
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-sm font-medium text-gray-300">
-                    Amount ({orderType === 'buy' ? 'USDC' : TRADING_PAIRS[selectedPair].symbol})
-                  </label>
-                  <span className="text-xs text-gray-400">
-                    Available: {orderType === 'buy' 
-                      ? parseFloat(usdcBalance).toFixed(2) + ' USDC'
-                      : (selectedPair === 'BTC/USDC' ? parseFloat(btcBalance).toFixed(6) : selectedPair === 'ETH/USDC' ? parseFloat(ethBalance).toFixed(4) : parseFloat(usdcBalance).toFixed(6)) + ' ' + TRADING_PAIRS[selectedPair].symbol
-                    }
-                  </span>
-                </div>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full px-4 py-3 bg-black/40 border border-white/20 rounded-xl text-white text-base placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300"
-                />
-                
-                {/* Quick Amount Buttons */}
-                <div className="flex gap-2 mt-2">
-                  {['25%', '50%', '75%', '100%'].map((pct) => {
-                    const percentage = parseFloat(pct) / 100;
-                    const balance = orderType === 'buy' 
-                      ? parseFloat(usdcBalance)
-                      : (selectedPair === 'BTC/USDC' ? parseFloat(btcBalance) : selectedPair === 'ETH/USDC' ? parseFloat(ethBalance) : parseFloat(usdcBalance));
+              {/* Buy or Sell Panel */}
+              {orderType === 'buy' ? (
+                <BuyPanel
+                  tokenAddress={(() => {
+                    const key = getTokenKey(TRADING_PAIRS[selectedPair].symbol);
+                    return key ? SUPPORTED_TOKENS[key]?.address || '' : '';
+                  })()}
+                  tokenSymbol={TRADING_PAIRS[selectedPair].symbol}
+                  tokenDecimals={TRADING_PAIRS[selectedPair].decimals}
+                  currentPrice={marketPrices[TRADING_PAIRS[selectedPair].symbol]?.price || realTimePrice}
+                  usdcBalance={usdcBalance}
+                  onSuccess={async (txHash) => {
+                    setSuccessTxHash(txHash);
+                    setShowSuccessToast(true);
                     
-                    return (
-                      <button
-                        key={pct}
-                        onClick={() => setAmount((balance * percentage).toFixed(2))}
-                        className="flex-1 py-1.5 text-xs font-semibold bg-gradient-to-br from-white/10 to-white/5 hover:from-white/20 hover:to-white/10 text-gray-300 hover:text-white border border-white/10 hover:border-white/30 rounded-lg transition-all duration-300 hover:scale-105"
-                        disabled={!connected}
-                      >
-                        {pct}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Total Display */}
-              <div className="mb-4 p-3 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-300 font-medium">
-                    {orderType === 'buy' ? 'You Pay' : 'You Sell'}
-                  </span>
-                  <span className="text-white font-bold font-mono">
-                    {orderType === 'buy' 
-                      ? `${amount || '0.00'} USDC` 
-                      : `${amount || '0.00'} ${TRADING_PAIRS[selectedPair].symbol}`
+                    // Wait for transaction confirmation before refreshing
+                    try {
+                      // Use singleton publicClient
+                      const publicClient = getPublicClient();
+                      
+                      console.log('⏳ Waiting for transaction confirmation...');
+                      await publicClient.waitForTransactionReceipt({ 
+                        hash: txHash as `0x${string}`,
+                        confirmations: 2,
+                      });
+                      console.log('✅ Transaction confirmed, refreshing balances...');
+                      
+                      // Refresh balances after confirmation
+                      await refreshBalance();
+                      console.log('✅ Balances refreshed');
+                      
+                      // Refresh trade history immediately
+                      refetchTrades();
+                      console.log('✅ Trade history refreshed');
+                    } catch (err) {
+                      console.error('Error waiting for confirmation:', err);
+                      // Still try to refresh after delay as fallback
+                      setTimeout(() => {
+                        refreshBalance();
+                        refetchTrades();
+                      }, 3000);
                     }
-                  </span>
-                </div>
-                {amount && parseFloat(amount) > 0 && (
-                  <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-white/10">
-                    <span className="text-gray-300 font-medium">
-                      {orderType === 'buy' ? 'You Get' : 'You Receive'}
-                    </span>
-                    <span className="text-green-400 font-bold font-mono">
-                      {orderType === 'buy' 
-                        ? `${(parseFloat(amount) / realTimePrice).toFixed(selectedPair === 'BTC/USDC' ? 6 : 4)} ${TRADING_PAIRS[selectedPair].symbol}`
-                        : `${(parseFloat(amount) * realTimePrice).toFixed(2)} USDC`
-                      }
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Place Order Button */}
-              <button
-                onClick={handlePlaceOrder}
-                disabled={!connected}
-                className={`w-full py-3.5 rounded-xl font-bold text-white text-base transition-all duration-300 shadow-xl ${
-                  connected ? 'hover:scale-[1.02] active:scale-[0.98]' : 'opacity-50 cursor-not-allowed'
-                } ${
-                  orderType === 'buy'
-                    ? 'bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 hover:from-green-600 hover:via-emerald-600 hover:to-green-700 shadow-green-500/50'
-                    : 'bg-gradient-to-r from-red-500 via-rose-500 to-red-600 hover:from-red-600 hover:via-rose-600 hover:to-red-700 shadow-red-500/50'
-                }`}
-              >
-                {connected ? `${orderType === 'buy' ? 'Buy' : 'Sell'} ${TRADING_PAIRS[selectedPair].symbol}` : 'Connect Wallet'}
-              </button>
+                    
+                    setTimeout(() => setShowSuccessToast(false), 5000);
+                  }}
+                />
+              ) : (
+                <SellPanel
+                  tokenAddress={(() => {
+                    const key = getTokenKey(TRADING_PAIRS[selectedPair].symbol);
+                    return key ? SUPPORTED_TOKENS[key]?.address || '' : '';
+                  })()}
+                  tokenSymbol={TRADING_PAIRS[selectedPair].symbol}
+                  tokenDecimals={TRADING_PAIRS[selectedPair].decimals}
+                  currentPrice={marketPrices[TRADING_PAIRS[selectedPair].symbol]?.price || realTimePrice}
+                  tokenBalance={(() => {
+                    const symbol = TRADING_PAIRS[selectedPair].symbol;
+                    switch(symbol) {
+                      case 'BTC': return btcBalance;
+                      case 'ETH': return ethBalance;
+                      case 'SOL': return solBalance;
+                      case 'BNB': return bnbBalance;
+                      case 'XRP': return xrpBalance;
+                      case 'TON': return tonBalance;
+                      case 'AVAX': return avaxBalance;
+                      case 'TRX': return tronBalance;
+                      case 'ADA': return cardanoBalance;
+                      case 'DOGE': return dogeBalance;
+                      default: return '0';
+                    }
+                  })()}
+                  onSuccess={async (txHash) => {
+                    setSuccessTxHash(txHash);
+                    setShowSuccessToast(true);
+                    
+                    // Wait for transaction confirmation before refreshing
+                    try {
+                      // Use singleton publicClient
+                      const publicClient = getPublicClient();
+                      
+                      console.log('⏳ Waiting for transaction confirmation...');
+                      await publicClient.waitForTransactionReceipt({ 
+                        hash: txHash as `0x${string}`,
+                        confirmations: 2,
+                      });
+                      console.log('✅ Transaction confirmed, refreshing balances...');
+                      
+                      // Refresh balances after confirmation
+                      await refreshBalance();
+                      console.log('✅ Balances refreshed');
+                      
+                      // Refresh trade history immediately
+                      refetchTrades();
+                      console.log('✅ Trade history refreshed');
+                    } catch (err) {
+                      console.error('Error waiting for confirmation:', err);
+                      // Still try to refresh after delay as fallback
+                      setTimeout(() => {
+                        refreshBalance();
+                        refetchTrades();
+                      }, 3000);
+                    }
+                    
+                    setTimeout(() => setShowSuccessToast(false), 5000);
+                  }}
+                />
+              )}
             </div>
           </div>
 
@@ -581,53 +537,90 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
 
         {/* Recent Trades Section */}
         <div className="mt-8 bg-gradient-to-br from-white/[0.02] to-white/[0.01] backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl">
-          <div className="p-4 border-b border-white/5">
+          <div className="p-4 border-b border-white/5 flex items-center justify-between">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full" />
-              Recent Trades - {selectedPair}
+              {connected ? `My Trade History - ${selectedPair}` : `Recent Trades - ${selectedPair}`}
             </h3>
+            {tradesLoading && (
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                Loading...
+              </div>
+            )}
           </div>
           
           {/* Trades Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-black/20">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Price (USDC)</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount ({TRADING_PAIRS[selectedPair].symbol})</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Total (USDC)</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Type</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {currentTrades.map((trade) => (
-                  <tr key={trade.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3 text-sm font-mono text-white">
-                      ${trade.price.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-mono text-gray-300">
-                      {trade.amount.toFixed(selectedPair === 'BTC/USDC' ? 6 : 4)}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-mono text-gray-300">
-                      ${trade.total.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">
-                      {trade.time.toLocaleTimeString()}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        trade.type === 'buy' 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {trade.type.toUpperCase()}
-                      </span>
-                    </td>
+            {recentTrades.length === 0 && !tradesLoading ? (
+              <div className="p-12 text-center">
+                <div className="text-gray-400 mb-2">📊</div>
+                {connected ? (
+                  <>
+                    <p className="text-gray-400">You haven't made any trades yet</p>
+                    <p className="text-xs text-gray-500 mt-1">Start trading to see your history!</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-400">Connect wallet to see your trade history</p>
+                    <p className="text-xs text-gray-500 mt-1">Your trades will appear here</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-black/20">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Price (USDC)</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount ({TRADING_PAIRS[selectedPair].symbol})</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Total (USDC)</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Time</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Transaction</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {currentTrades.map((trade) => (
+                    <tr key={trade.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-4 py-3 text-sm font-mono text-white">
+                        ${trade.price.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-mono text-gray-300">
+                        {trade.amount.toFixed(TRADING_PAIRS[selectedPair].decimals === 8 ? 6 : TRADING_PAIRS[selectedPair].decimals === 18 ? 4 : 2)}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-mono text-gray-300">
+                        ${trade.total.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-400">
+                        {trade.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          trade.type === 'buy' 
+                            ? 'bg-green-500/20 text-green-400' 
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {trade.type.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <a
+                          href={trade.explorerLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline decoration-dotted underline-offset-2 transition-colors flex items-center gap-1"
+                        >
+                          View
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Pagination */}
@@ -670,6 +663,26 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
             </div>
           )}
         </div>
+
+        {/* Success Toast */}
+        {showSuccessToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 right-8 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-xl shadow-2xl z-50"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                ✓
+              </div>
+              <div>
+                <p className="font-bold">Transaction Submitted!</p>
+                <p className="text-xs opacity-90">TxHash: {successTxHash.substring(0, 10)}...</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
     </motion.div>
   );

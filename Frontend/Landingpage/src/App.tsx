@@ -18,6 +18,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { useWalletStorageManager } from './hooks/useWalletStorageManager';
 import ErrorBoundary from './components/ErrorBoundary';
 import { PriceProvider } from './context/PriceContext';
+import { ToastContainer } from './components/Toast';
 
 // Lazy load pages for better initial load performance (scalable for 100k+ users)
 const DCAPage = lazy(() => import('./pages/dca/DCAPage').then(m => ({ default: m.DCAPage })));
@@ -136,6 +137,7 @@ const App = () => {
         <BackgroundMusic />
         {/* Dynamic User Profile - Required for wallet export functionality */}
         <DynamicUserProfile variant="modal" />
+        <ToastContainer />
       </ErrorBoundary>
     </PriceProvider>
   );

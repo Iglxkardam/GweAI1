@@ -30,7 +30,7 @@ export const LockAssetModal: React.FC<LockAssetModalProps> = ({
   const [selectedDuration, setSelectedDuration] = useState(90);
   const [isProcessing, setIsProcessing] = useState(false);
   const [txStatus, setTxStatus] = useState<'idle' | 'signing' | 'processing' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
+
 
   useEffect(() => {
     if (isOpen && pool) {
@@ -38,7 +38,6 @@ export const LockAssetModal: React.FC<LockAssetModalProps> = ({
       setSelectedDuration(90);
       setIsProcessing(false);
       setTxStatus('idle');
-      setErrorMessage('');
     }
   }, [isOpen, pool]);
 
@@ -60,7 +59,6 @@ export const LockAssetModal: React.FC<LockAssetModalProps> = ({
       try {
         setIsProcessing(true);
         setTxStatus('signing');
-        setErrorMessage('');
         
         // Call onConfirm which will trigger wallet popup
         await onConfirm(pool.token, amountNum, selectedDuration);
@@ -75,7 +73,6 @@ export const LockAssetModal: React.FC<LockAssetModalProps> = ({
       } catch (error: any) {
         console.error('Stake failed:', error);
         setTxStatus('error');
-        setErrorMessage(error?.message || 'Transaction failed');
         setIsProcessing(false);
       }
     }
@@ -135,7 +132,7 @@ export const LockAssetModal: React.FC<LockAssetModalProps> = ({
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center space-x-2 min-w-0">
-                    <span className="text-2xl flex-shrink-0">{pool.tokenIcon}</span>
+                    <img src={pool.tokenLogo} alt={pool.token} className="w-8 h-8 flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="text-white font-bold text-sm truncate">{pool.token} Stake Pool</p>
                       <p className="text-gray-400 text-xs truncate">Available: {balance.toFixed(4)} {pool.token}</p>
@@ -155,7 +152,7 @@ export const LockAssetModal: React.FC<LockAssetModalProps> = ({
                   isProcessing ? 'opacity-50' : ''
                 }`}>
                   <div className="flex items-center gap-2">
-                    <span className="text-xl text-white flex-shrink-0">{pool.tokenIcon}</span>
+                    <img src={pool.tokenLogo} alt={pool.token} className="w-6 h-6 flex-shrink-0" />
                     <input
                       type="number"
                       value={amount}
@@ -306,7 +303,7 @@ export const LockAssetModal: React.FC<LockAssetModalProps> = ({
                         <div className="text-red-400 text-xl flex-shrink-0">✕</div>
                         <div className="min-w-0">
                           <p className="text-red-400 font-semibold text-sm">Transaction Failed</p>
-                          <p className="text-red-300 text-[10px] truncate">{errorMessage || 'Please try again'}</p>
+                          <p className="text-red-300 text-[10px]">Please try again</p>
                         </div>
                       </>
                     )}

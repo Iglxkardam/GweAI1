@@ -59,7 +59,6 @@ export const NetworkSwitcher: React.FC = () => {
   const { chainId, connected, primaryWallet } = useComprehensiveWallet();
   const [isOpen, setIsOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
   const currentNetwork = NETWORKS.find(n => n.id === chainId) || NETWORKS[0];
   
@@ -69,7 +68,6 @@ export const NetworkSwitcher: React.FC = () => {
     
     try {
       setIsSwitching(true);
-      setError(null);
       
       const network = NETWORKS.find(n => n.id === networkId);
       if (!network) {
@@ -111,8 +109,7 @@ export const NetworkSwitcher: React.FC = () => {
       
       setIsOpen(false);
     } catch (err: any) {
-      console.error('Network switch failed:', err);
-      setError(err.message || 'Failed to switch network');
+      console.error('Network switch error:', err);
     } finally {
       setIsSwitching(false);
     }
@@ -161,11 +158,7 @@ export const NetworkSwitcher: React.FC = () => {
             </div>
             
             {/* Error Message */}
-            {error && (
-              <div className="mx-4 mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-                <p className="text-xs text-red-400">{error}</p>
-              </div>
-            )}
+
             
             {/* Network List */}
             <div className="p-2">

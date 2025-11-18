@@ -1,7 +1,7 @@
 export interface LockedAsset {
   id: string;
   token: string;
-  tokenIcon: string;
+  tokenLogo: string;
   amount: number;
   usdValue: number;
   lockDate: number; // timestamp
@@ -16,7 +16,7 @@ export interface LockedAsset {
 
 export interface FreeAsset {
   token: string;
-  tokenIcon: string;
+  tokenLogo: string;
   balance: number;
   usdValue: number;
   apy: number;
@@ -25,7 +25,7 @@ export interface FreeAsset {
 export interface StakePool {
   id: string;
   token: string;
-  tokenIcon: string;
+  tokenLogo: string;
   apy: number;
   totalStaked: number;
   totalStakedUSD: number;

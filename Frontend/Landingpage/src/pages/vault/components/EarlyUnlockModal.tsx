@@ -126,7 +126,7 @@ export const EarlyUnlockModal: React.FC<EarlyUnlockModalProps> = ({
               {/* Vault Info */}
               <div className="bg-white/[0.03] backdrop-blur-sm rounded-xl border border-white/[0.08] p-4 hover:border-white/[0.12] transition-colors mb-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-2xl">{asset.tokenIcon}</span>
+                  <img src={asset.tokenLogo} alt={asset.token} className="w-8 h-8" />
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-white">{asset.token} Vault</h3>
                     <p className="text-gray-400 text-sm">{asset.amount.toFixed(4)} {asset.token} locked</p>

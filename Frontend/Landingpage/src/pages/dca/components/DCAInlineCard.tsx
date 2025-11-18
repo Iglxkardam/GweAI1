@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaCheckCircle, FaBitcoin } from 'react-icons/fa';
-import { SiEthereum } from 'react-icons/si';
+import { FaCheckCircle } from 'react-icons/fa';
+import { TOKENS } from '../../../config/tokens';
 
 export interface DCAParameters {
   amount: number;
@@ -18,9 +18,9 @@ interface DCAInlineCardProps {
 }
 
 const tokenIcons: Record<string, React.ReactNode> = {
-  'BTC': <FaBitcoin className="text-orange-400 text-3xl" />,
-  'ETH': <SiEthereum className="text-blue-400 text-3xl" />,
-  'SOL': <span className="text-purple-400 text-3xl">◎</span>,
+  'BTC': <img src={TOKENS.BTC.logo} alt="BTC" className="w-8 h-8" />,
+  'ETH': <img src={TOKENS.ETH.logo} alt="ETH" className="w-8 h-8" />,
+  'SOL': <img src={TOKENS.SOL.logo} alt="SOL" className="w-8 h-8" />,
 };
 
 const frequencyLabels: Record<string, string> = {

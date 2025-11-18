@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaCheckCircle, FaBitcoin } from 'react-icons/fa';
-import { SiEthereum } from 'react-icons/si';
+import { FaTimes, FaCheckCircle } from 'react-icons/fa';
+import { TOKENS } from '../../../config/tokens';
 
 export interface DCAParameters {
   amount: number;
@@ -19,9 +19,9 @@ interface DCAConfirmationModalProps {
 }
 
 const tokenIcons: Record<string, React.ReactNode> = {
-  'BTC': <FaBitcoin className="text-orange-400" />,
-  'ETH': <SiEthereum className="text-blue-400" />,
-  'SOL': <span className="text-purple-400">◎</span>,
+  'BTC': <img src={TOKENS.BTC.logo} alt="BTC" className="w-10 h-10" />,
+  'ETH': <img src={TOKENS.ETH.logo} alt="ETH" className="w-10 h-10" />,
+  'SOL': <img src={TOKENS.SOL.logo} alt="SOL" className="w-10 h-10" />,
 };
 
 const frequencyLabels: Record<string, string> = {

@@ -4,11 +4,12 @@ import { FaExchangeAlt, FaChevronDown, FaCog, FaArrowDown } from 'react-icons/fa
 import { StarfieldBackground } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 import { BuyUSDCModal } from './components';
+import { TOKENS } from '../../config/tokens';
 
 interface Token {
   symbol: string;
   name: string;
-  icon: string;
+  logo: string;
   balance: string;
   coinGeckoId: string;
 }
@@ -31,37 +32,90 @@ interface ChartPoint {
 
 export const SwapPage: React.FC = () => {
   // Get real wallet balances from AGW
-  const { ethBalance, usdcBalance, btcBalance, connected, address } = useAgwWallet();
+  const { 
+    ethBalance, usdcBalance, btcBalance, solBalance, bnbBalance,
+    xrpBalance, tonBalance, avaxBalance, tronBalance, cardanoBalance, dogeBalance,
+    connected, address 
+  } = useAgwWallet();
   
   // Create tokens array with real balances (only when connected, otherwise show 0)
   const tokens: Token[] = [
     { 
-      symbol: 'ETH', 
-      name: 'Ethereum', 
-      icon: 'Ξ', 
-      balance: connected ? parseFloat(ethBalance).toFixed(4) : '0.0000', 
-      coinGeckoId: 'ethereum' 
+      symbol: TOKENS.BTC.symbol, 
+      name: TOKENS.BTC.name, 
+      logo: TOKENS.BTC.logo, 
+      balance: connected ? parseFloat(btcBalance).toFixed(8) : '0.00000000', 
+      coinGeckoId: TOKENS.BTC.coinGeckoId 
     },
     { 
-      symbol: 'USDC', 
-      name: 'USD Coin', 
-      icon: '$', 
+      symbol: TOKENS.ETH.symbol, 
+      name: TOKENS.ETH.name, 
+      logo: TOKENS.ETH.logo, 
+      balance: connected ? parseFloat(ethBalance).toFixed(8) : '0.00000000', 
+      coinGeckoId: TOKENS.ETH.coinGeckoId 
+    },
+    { 
+      symbol: TOKENS.SOL.symbol, 
+      name: TOKENS.SOL.name, 
+      logo: TOKENS.SOL.logo, 
+      balance: connected ? parseFloat(solBalance).toFixed(4) : '0.0000', 
+      coinGeckoId: TOKENS.SOL.coinGeckoId 
+    },
+    { 
+      symbol: TOKENS.BNB.symbol, 
+      name: TOKENS.BNB.name, 
+      logo: TOKENS.BNB.logo, 
+      balance: connected ? parseFloat(bnbBalance).toFixed(8) : '0.00000000', 
+      coinGeckoId: TOKENS.BNB.coinGeckoId 
+    },
+    { 
+      symbol: TOKENS.XRP.symbol, 
+      name: TOKENS.XRP.name, 
+      logo: TOKENS.XRP.logo, 
+      balance: connected ? parseFloat(xrpBalance).toFixed(2) : '0.00', 
+      coinGeckoId: TOKENS.XRP.coinGeckoId 
+    },
+    { 
+      symbol: TOKENS.TON.symbol, 
+      name: TOKENS.TON.name, 
+      logo: TOKENS.TON.logo, 
+      balance: connected ? parseFloat(tonBalance).toFixed(4) : '0.0000', 
+      coinGeckoId: TOKENS.TON.coinGeckoId 
+    },
+    { 
+      symbol: TOKENS.AVAX.symbol, 
+      name: TOKENS.AVAX.name, 
+      logo: TOKENS.AVAX.logo, 
+      balance: connected ? parseFloat(avaxBalance).toFixed(8) : '0.00000000', 
+      coinGeckoId: TOKENS.AVAX.coinGeckoId 
+    },
+    { 
+      symbol: TOKENS.TRX.symbol, 
+      name: TOKENS.TRX.name, 
+      logo: TOKENS.TRX.logo, 
+      balance: connected ? parseFloat(tronBalance).toFixed(2) : '0.00', 
+      coinGeckoId: TOKENS.TRX.coinGeckoId 
+    },
+    { 
+      symbol: TOKENS.ADA.symbol, 
+      name: TOKENS.ADA.name, 
+      logo: TOKENS.ADA.logo, 
+      balance: connected ? parseFloat(cardanoBalance).toFixed(2) : '0.00', 
+      coinGeckoId: TOKENS.ADA.coinGeckoId 
+    },
+    { 
+      symbol: TOKENS.DOGE.symbol, 
+      name: TOKENS.DOGE.name, 
+      logo: TOKENS.DOGE.logo, 
+      balance: connected ? parseFloat(dogeBalance).toFixed(8) : '0.00000000', 
+      coinGeckoId: TOKENS.DOGE.coinGeckoId 
+    },
+    { 
+      symbol: TOKENS.USDC.symbol, 
+      name: TOKENS.USDC.name, 
+      logo: TOKENS.USDC.logo, 
       balance: connected ? parseFloat(usdcBalance).toFixed(2) : '0.00', 
-      coinGeckoId: 'usd-coin' 
-    },
-    { 
-      symbol: 'BTC', 
-      name: 'Bitcoin', 
-      icon: '₿', 
-      balance: connected ? parseFloat(btcBalance).toFixed(6) : '0.000000', 
-      coinGeckoId: 'bitcoin' 
-    },
-    { 
-      symbol: 'USDT', 
-      name: 'Tether', 
-      icon: '₮', 
-      balance: '0.00', 
-      coinGeckoId: 'tether' 
+      coinGeckoId: TOKENS.USDC.coinGeckoId 
     },
   ];
 
@@ -257,30 +311,30 @@ export const SwapPage: React.FC = () => {
   useEffect(() => {
     const updatedTokens = [
       { 
-        symbol: 'ETH', 
-        name: 'Ethereum', 
-        icon: 'Ξ', 
+        symbol: TOKENS.ETH.symbol, 
+        name: TOKENS.ETH.name, 
+        logo: TOKENS.ETH.logo, 
         balance: connected ? parseFloat(ethBalance).toFixed(4) : '0.0000', 
-        coinGeckoId: 'ethereum' 
+        coinGeckoId: TOKENS.ETH.coinGeckoId 
       },
       { 
-        symbol: 'USDC', 
-        name: 'USD Coin', 
-        icon: '$', 
+        symbol: TOKENS.USDC.symbol, 
+        name: TOKENS.USDC.name, 
+        logo: TOKENS.USDC.logo, 
         balance: connected ? parseFloat(usdcBalance).toFixed(2) : '0.00', 
-        coinGeckoId: 'usd-coin' 
+        coinGeckoId: TOKENS.USDC.coinGeckoId 
       },
       { 
-        symbol: 'BTC', 
-        name: 'Bitcoin', 
-        icon: '₿', 
+        symbol: TOKENS.BTC.symbol, 
+        name: TOKENS.BTC.name, 
+        logo: TOKENS.BTC.logo, 
         balance: connected ? parseFloat(btcBalance).toFixed(6) : '0.000000', 
-        coinGeckoId: 'bitcoin' 
+        coinGeckoId: TOKENS.BTC.coinGeckoId 
       },
       { 
         symbol: 'USDT', 
         name: 'Tether', 
-        icon: '₮', 
+        logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/825.png', 
         balance: '0.00', 
         coinGeckoId: 'tether' 
       },
@@ -472,7 +526,7 @@ export const SwapPage: React.FC = () => {
                   onClick={() => setShowFromTokens(!showFromTokens)}
                   className="flex items-center bg-white/[0.08] hover:bg-white/[0.12] px-3 py-2 rounded-xl border border-white/[0.15] transition-all duration-200 gap-2 flex-shrink-0"
                 >
-                  <span className="text-lg text-white brightness-150">{fromToken.icon}</span>
+                  <img src={fromToken.logo} alt={fromToken.symbol} className="w-5 h-5" />
                   <span className="text-white font-semibold text-sm">{fromToken.symbol}</span>
                   <FaChevronDown className="text-gray-400 text-xs" />
                 </button>
@@ -494,7 +548,7 @@ export const SwapPage: React.FC = () => {
                       className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-all duration-200"
                     >
                       <div className="flex items-center space-x-3">
-                        <span className="text-2xl text-white brightness-150">{token.icon}</span>
+                        <img src={token.logo} alt={token.symbol} className="w-8 h-8" />
                         <div className="text-left">
                           <p className="text-white font-semibold text-sm">{token.symbol}</p>
                           <p className="text-gray-400 text-xs">{token.name}</p>
@@ -549,7 +603,7 @@ export const SwapPage: React.FC = () => {
                   onClick={() => setShowToTokens(!showToTokens)}
                   className="flex items-center bg-white/[0.08] hover:bg-white/[0.12] px-3 py-2 rounded-xl border border-white/[0.15] transition-all duration-200 gap-2 flex-shrink-0"
                 >
-                  <span className="text-lg text-white brightness-150">{toToken.icon}</span>
+                  <img src={toToken.logo} alt={toToken.symbol} className="w-5 h-5" />
                   <span className="text-white font-semibold text-sm">{toToken.symbol}</span>
                   <FaChevronDown className="text-gray-400 text-xs" />
                 </button>
@@ -571,7 +625,7 @@ export const SwapPage: React.FC = () => {
                       className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-all duration-200"
                     >
                       <div className="flex items-center space-x-3">
-                        <span className="text-2xl text-white brightness-150">{token.icon}</span>
+                        <img src={token.logo} alt={token.symbol} className="w-8 h-8" />
                         <div className="text-left">
                           <p className="text-white font-semibold text-sm">{token.symbol}</p>
                           <p className="text-gray-400 text-xs">{token.name}</p>
@@ -658,7 +712,7 @@ export const SwapPage: React.FC = () => {
               <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/[0.08]">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 rounded-full bg-white/[0.05] flex items-center justify-center border border-white/[0.1]">
-                    <span className="text-lg text-white brightness-150">{fromToken.icon}</span>
+                    <img src={fromToken.logo} alt={fromToken.symbol} className="w-5 h-5" />
                   </div>
                   <h3 className="text-lg font-bold text-white">{fromToken.symbol}/{toToken.symbol}</h3>
                 </div>
