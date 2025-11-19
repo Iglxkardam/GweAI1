@@ -52,6 +52,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip external CDN resources (fonts, Dynamic Auth, etc.)
+  const externalDomains = [
+    'fonts.googleapis.com',
+    'fonts.gstatic.com',
+    'dynamic-static-assets.com',
+    'app.dynamicauth.com',
+    'logs.dynamicauth.com',
+    'api.binance.com',
+    'min-api.cryptocompare.com',
+    'tradingview.com'
+  ];
+  
+  if (externalDomains.some(domain => url.hostname.includes(domain))) {
+    return;
+  }
+
   // API calls - network first, then cache
   if (url.pathname.startsWith('/api/') || url.hostname.includes('api')) {
     event.respondWith(
