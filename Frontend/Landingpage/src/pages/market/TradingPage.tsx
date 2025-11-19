@@ -200,7 +200,8 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
     // Create new widget instance with current pair immediately
     try {
       widgetInstanceRef.current = new window.TradingView.widget({
-        autosize: true,
+        width: '100%',
+        height: '100%',
         symbol: TRADING_PAIRS[selectedPair].tradingViewSymbol,
         interval: 'D',
         timezone: 'Etc/UTC',
@@ -209,26 +210,22 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
         locale: 'en',
         toolbar_bg: '#000000',
         enable_publishing: false,
-        hide_top_toolbar: false,
-        hide_legend: false,
-        save_image: false,
+        allow_symbol_change: true,
         container_id: 'tradingview_widget',
-        backgroundColor: 'rgba(0, 0, 0, 0)',
         disabled_features: [
-          'use_localstorage_for_settings',
-          'widget_logo'
+          'use_localstorage_for_settings'
         ],
-        enabled_features: ['study_templates'],
-        loading_screen: { backgroundColor: "#000000", foregroundColor: "#8B5CF6" },
+        enabled_features: [],
+        loading_screen: { backgroundColor: "#000000" },
         overrides: {
-          'paneProperties.background': 'rgba(0, 0, 0, 0)',
+          'paneProperties.background': '#000000',
           'paneProperties.backgroundType': 'solid',
           'mainSeriesProperties.candleStyle.upColor': '#26a69a',
           'mainSeriesProperties.candleStyle.downColor': '#ef5350',
           'mainSeriesProperties.candleStyle.borderUpColor': '#26a69a',
           'mainSeriesProperties.candleStyle.borderDownColor': '#ef5350',
-          'paneProperties.vertGridProperties.color': 'rgba(255, 255, 255, 0.03)',
-          'paneProperties.horzGridProperties.color': 'rgba(255, 255, 255, 0.03)',
+          'paneProperties.vertGridProperties.color': 'rgba(255, 255, 255, 0.1)',
+          'paneProperties.horzGridProperties.color': 'rgba(255, 255, 255, 0.1)',
         },
       });
     } catch (error) {
