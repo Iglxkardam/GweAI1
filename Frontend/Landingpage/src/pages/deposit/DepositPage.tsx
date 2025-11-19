@@ -193,6 +193,22 @@ export const DepositPage: React.FC = () => {
     };
   }, [address]);
 
+  // Auto-refresh balances every 15 seconds when wallet is connected
+  useEffect(() => {
+    if (!connected || !address) return;
+
+    // Initial refresh
+    refreshBalance();
+
+    // Set up polling for balance updates
+    const balanceInterval = setInterval(() => {
+      console.log('[DepositPage] Auto-refreshing balances...');
+      refreshBalance();
+    }, 15000); // 15 seconds
+
+    return () => clearInterval(balanceInterval);
+  }, [connected, address, refreshBalance]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await refreshBalance();
