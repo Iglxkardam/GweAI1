@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaArrowDown } from 'react-icons/fa';
 import { useTradingContract } from '../hooks/useTradingContract';
 import { useAMMQuote } from '../hooks/useAMMQuote';
 import { showWarningToast } from '../../../utils/toastHelper';
@@ -142,13 +141,6 @@ export const BuyPanel: React.FC<BuyPanelProps> = ({
         </div>
       </div>
 
-      {/* Arrow */}
-      <div className="flex justify-center">
-        <div className="w-10 h-10 bg-black/40 border border-white/20 rounded-full flex items-center justify-center">
-          <FaArrowDown className="text-gray-400" />
-        </div>
-      </div>
-
       {/* Token Output */}
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">You Receive (estimated)</label>
@@ -185,31 +177,38 @@ export const BuyPanel: React.FC<BuyPanelProps> = ({
         </div>
       </div>
 
-      {/* Price Info */}
-      <div className="p-3 bg-black/20 rounded-lg space-y-1 text-sm">
-        <div className="flex justify-between text-gray-400">
-          <span>Market Price</span>
-          <span className="text-white">
-            ${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: currentPrice > 1000 ? 2 : 6 })}
-          </span>
-        </div>
-        <div className="flex justify-between text-gray-400">
-          <span>Protocol Fee</span>
-          <span className="text-white">{parseFloat(protocolFee).toFixed(tokenDecimals > 8 ? 8 : tokenDecimals === 6 ? 2 : tokenDecimals === 9 ? 4 : 8)} {tokenSymbol}</span>
-        </div>
-        <div className="flex justify-between text-gray-400">
-          <span>Price Impact</span>
-          <span className={`${priceImpact > 5 ? 'text-red-400' : priceImpact > 1 ? 'text-yellow-400' : 'text-green-400'}`}>
-            {priceImpact.toFixed(2)}%
-          </span>
-        </div>
-        <div className="flex justify-between text-gray-400">
-          <span>Min. Received</span>
-          <span className="text-white">
-            {(parseFloat(expectedTokens) * (1 - parseFloat(slippage) / 100)).toFixed(tokenDecimals > 8 ? 8 : tokenDecimals === 6 ? 2 : tokenDecimals === 9 ? 4 : 8)} {tokenSymbol}
-          </span>
-        </div>
-      </div>
+      {/* Price Info - Only show when user has input */}
+      {usdcAmount && parseFloat(usdcAmount) > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="p-3 bg-black/20 rounded-lg space-y-1 text-sm"
+        >
+          <div className="flex justify-between text-gray-400">
+            <span>Market Price</span>
+            <span className="text-white">
+              ${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: currentPrice > 1000 ? 2 : 6 })}
+            </span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Protocol Fee</span>
+            <span className="text-white">{parseFloat(protocolFee).toFixed(tokenDecimals > 8 ? 8 : tokenDecimals === 6 ? 2 : tokenDecimals === 9 ? 4 : 8)} {tokenSymbol}</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Price Impact</span>
+            <span className={`${priceImpact > 5 ? 'text-red-400' : priceImpact > 1 ? 'text-yellow-400' : 'text-green-400'}`}>
+              {priceImpact.toFixed(2)}%
+            </span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Min. Received</span>
+            <span className="text-white">
+              {(parseFloat(expectedTokens) * (1 - parseFloat(slippage) / 100)).toFixed(tokenDecimals > 8 ? 8 : tokenDecimals === 6 ? 2 : tokenDecimals === 9 ? 4 : 8)} {tokenSymbol}
+            </span>
+          </div>
+        </motion.div>
+      )}
 
       {/* Buy Button */}
       <motion.button
