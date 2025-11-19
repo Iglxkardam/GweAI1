@@ -214,8 +214,12 @@ export const TradingPage: React.FC<TradingPageProps> = ({ pair: initialPair, onB
         save_image: false,
         container_id: 'tradingview_widget',
         backgroundColor: 'rgba(0, 0, 0, 0)',
-        disabled_features: ['use_localstorage_for_settings'],
+        disabled_features: [
+          'use_localstorage_for_settings',
+          'widget_logo'
+        ],
         enabled_features: ['study_templates'],
+        loading_screen: { backgroundColor: "#000000", foregroundColor: "#8B5CF6" },
         overrides: {
           'paneProperties.background': 'rgba(0, 0, 0, 0)',
           'paneProperties.backgroundType': 'solid',
