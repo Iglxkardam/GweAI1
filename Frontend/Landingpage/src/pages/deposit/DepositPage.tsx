@@ -75,16 +75,22 @@ export const DepositPage: React.FC = () => {
     }
   }, [address]);
 
-  // Monitor wallet creation progress
+  // Monitor wallet creation progress - CRITICAL: Keep loading active during wallet creation
   useEffect(() => {
     if (connected && !address) {
       console.log('[DepositPage] ⏳ Wallet connected but address not ready yet (creating wallet)...');
-      // Keep showing loading
+      // Ensure loading state is active during wallet creation
+      setIsConnecting(true);
     }
   }, [connected, address]);
 
-  // Stop loading only if auth flow is closed AND user didn't authenticate
+  // Stop loading only if auth flow is closed AND user definitely cancelled
   useEffect(() => {
+    // Only stop loading if:
+    // 1. Auth flow closed (!showAuthFlow)
+    // 2. User is connecting (isConnecting)
+    // 3. NOT connected (user cancelled before connecting)
+    // 4. No address (no wallet created)
     if (!showAuthFlow && isConnecting && !connected && !address) {
       // Auth flow closed without connecting, stop loading
       console.log('[DepositPage] ❌ Auth flow closed without connection, stopping loading');
