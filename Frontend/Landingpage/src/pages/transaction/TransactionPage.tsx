@@ -5,15 +5,25 @@ import { StarfieldBackground } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 import { SUPPORTED_TOKENS } from '../deposit/hooks/useAgwWallet';
 
-// Helper to get token symbol from address
+// Helper to get token symbol from address - Fixed mapping
 const getTokenSymbol = (address: string): string => {
   const addr = address.toLowerCase();
-  for (const [symbol, config] of Object.entries(SUPPORTED_TOKENS)) {
-    if (config.address.toLowerCase() === addr) {
-      return symbol;
-    }
-  }
-  return 'TOKEN';
+  
+  // Create reverse mapping for proper symbols
+  const symbolMap: Record<string, string> = {
+    [SUPPORTED_TOKENS.BTC.address.toLowerCase()]: 'BTC',
+    [SUPPORTED_TOKENS.SOL.address.toLowerCase()]: 'SOL',
+    [SUPPORTED_TOKENS.BNB.address.toLowerCase()]: 'BNB',
+    [SUPPORTED_TOKENS.XRP.address.toLowerCase()]: 'XRP',
+    [SUPPORTED_TOKENS.TON.address.toLowerCase()]: 'TON',
+    [SUPPORTED_TOKENS.AVAX.address.toLowerCase()]: 'AVAX',
+    [SUPPORTED_TOKENS.TRON.address.toLowerCase()]: 'TRX', // TRON -> TRX
+    [SUPPORTED_TOKENS.CARDANO.address.toLowerCase()]: 'ADA', // CARDANO -> ADA
+    [SUPPORTED_TOKENS.DOGE.address.toLowerCase()]: 'DOGE',
+    [SUPPORTED_TOKENS.USDC.address.toLowerCase()]: 'USDC',
+  };
+  
+  return symbolMap[addr] || 'TOKEN';
 };
 
 interface Transaction {
@@ -66,12 +76,27 @@ export const TransactionPage: React.FC = () => {
                 const tokenAddress = key.split('_')[1];
                 const symbol = getTokenSymbol(tokenAddress);
                 
+                // Get token name mapping
+                const nameMap: Record<string, string> = {
+                  'BTC': 'Bitcoin',
+                  'ETH': 'Ethereum',
+                  'SOL': 'Solana',
+                  'BNB': 'BNB',
+                  'XRP': 'Ripple',
+                  'TON': 'Toncoin',
+                  'AVAX': 'Avalanche',
+                  'TRX': 'Tron',
+                  'ADA': 'Cardano',
+                  'DOGE': 'Dogecoin',
+                  'USDC': 'USD Coin',
+                };
+                
                 txs.push({
                   id: trade.id || trade.txHash,
                   type: trade.type === 'buy' ? 'buy' : 'sell',
-                  asset: symbol,
+                  asset: nameMap[symbol] || symbol,
                   symbol: symbol,
-                  amount: trade.amount?.toFixed(symbol === 'BTC' ? 8 : symbol === 'ETH' ? 6 : 4) || '0',
+                  amount: trade.amount?.toFixed(symbol === 'BTC' ? 8 : symbol === 'DOGE' ? 8 : symbol === 'ETH' ? 6 : 4) || '0',
                   value: `$${trade.total?.toFixed(2) || '0.00'}`,
                   date: new Date(trade.time).toLocaleString(),
                   status: 'completed',
@@ -477,9 +502,9 @@ export const TransactionPage: React.FC = () => {
                         : 'bg-gradient-to-br from-purple-400 to-purple-500'
                     }`}>
                       {transaction.type === 'buy' ? (
-                        <FaArrowDown className="text-white text-sm" />
-                      ) : transaction.type === 'sell' ? (
                         <FaArrowUp className="text-white text-sm" />
+                      ) : transaction.type === 'sell' ? (
+                        <FaArrowDown className="text-white text-sm" />
                       ) : transaction.type === 'swap' ? (
                         <FaExchangeAlt className="text-white text-sm" />
                       ) : (
