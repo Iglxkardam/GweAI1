@@ -45,7 +45,7 @@ export const DepositPage: React.FC = () => {
   const TRON_PRICE = 0.29;
   const CARDANO_PRICE = prices.ada || 0.47;
   const DOGE_PRICE = prices.doge || 0.16;
-  const { showAuthFlow, primaryWallet } = useDynamicContext();
+  const { primaryWallet } = useDynamicContext();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
@@ -84,19 +84,15 @@ export const DepositPage: React.FC = () => {
     }
   }, [connected, address]);
 
-  // Stop loading only if auth flow is closed AND user definitely cancelled
+  // Stop loading ONLY when we have a definitive result (success or explicit cancellation)
   useEffect(() => {
-    // Only stop loading if:
-    // 1. Auth flow closed (!showAuthFlow)
-    // 2. User is connecting (isConnecting)
-    // 3. NOT connected (user cancelled before connecting)
-    // 4. No address (no wallet created)
-    if (!showAuthFlow && isConnecting && !connected && !address) {
-      // Auth flow closed without connecting, stop loading
-      console.log('[DepositPage] ❌ Auth flow closed without connection, stopping loading');
+    // Don't use showAuthFlow to determine cancellation - it closes even during wallet creation
+    // Only stop loading when we get an address (success) - cancellation is handled by event listener
+    if (isConnecting && address) {
+      console.log('[DepositPage] ✅ Wallet creation complete, stopping loading');
       setIsConnecting(false);
     }
-  }, [showAuthFlow, isConnecting, connected, address]);
+  }, [isConnecting, address]);
 
   // Listen for wallet connection cancellation
   useEffect(() => {
