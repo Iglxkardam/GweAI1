@@ -176,6 +176,7 @@ export const CONTRACT_SIGNATURES = {
   // Router functions
   ROUTER_BUY: '0xa59ac6dd', // buy(address,uint256,uint256)
   ROUTER_SELL: '0x6a272462', // sell(address,uint256,uint256)
+  ROUTER_SWAP: '0xfe029156', // swap(address,address,uint256,uint256)
   
   // Subscription functions
   SUBSCRIPTION_PURCHASE: '0x98693010', // purchasePlan(uint8)

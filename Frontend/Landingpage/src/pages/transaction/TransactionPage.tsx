@@ -4,6 +4,9 @@ import { FaHistory, FaFilter, FaCheckCircle, FaClock, FaArrowDown, FaArrowUp, Fa
 import { StarfieldBackground } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 import { SUPPORTED_TOKENS } from '../deposit/hooks/useAgwWallet';
+import { useSwapTransactions } from '../swap/hooks/useSwapTransactions';
+import { TOKENS } from '../../config/tokens';
+import { formatUnits } from 'viem';
 
 // Helper to get token symbol from address - Fixed mapping
 const getTokenSymbol = (address: string): string => {
@@ -46,6 +49,9 @@ export const TransactionPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const ITEMS_PER_PAGE = 10;
+  
+  // Fetch real swap transactions from blockchain
+  const { transactions: swapTransactions } = useSwapTransactions(address || undefined, connected);
 
   // Load all transactions from localStorage
   useEffect(() => {
@@ -136,28 +142,48 @@ export const TransactionPage: React.FC = () => {
         console.error('Error loading wallet transactions:', err);
       }
 
-      // Load swap transactions (if any stored)
+      // Load real swap transactions from blockchain
       try {
-        const swapKey = `wallet_${address.toLowerCase()}_swaps`;
-        const swapData = localStorage.getItem(swapKey);
-        if (swapData) {
-          const swaps = JSON.parse(swapData);
-          swaps.forEach((swap: any) => {
-            txs.push({
-              id: swap.id || swap.txHash,
-              type: 'swap',
-              asset: swap.fromToken || 'Unknown',
-              symbol: swap.fromSymbol || 'N/A',
-              amount: swap.fromAmount?.toString() || '0',
-              value: `$${swap.value?.toFixed(2) || '0.00'}`,
-              date: new Date(swap.timestamp).toLocaleString(),
-              status: swap.status || 'completed',
-              toAsset: swap.toToken,
-              toSymbol: swap.toSymbol,
-              txHash: swap.txHash
-            });
+        swapTransactions.forEach((swap) => {
+          // Format token amounts with proper decimals
+          const formatSwapAmount = (amount: string, symbol: string): string => {
+            const decimals = TOKENS[symbol]?.decimals || 18;
+            const formatted = formatUnits(BigInt(amount), decimals);
+            return parseFloat(formatted).toFixed(decimals === 6 ? 2 : decimals === 8 ? 8 : 4);
+          };
+
+          const fromSymbol = getTokenSymbol(swap.tokenIn);
+          const toSymbol = getTokenSymbol(swap.tokenOut);
+          
+          // Get token name mapping
+          const nameMap: Record<string, string> = {
+            'BTC': 'Bitcoin',
+            'ETH': 'Ethereum',
+            'SOL': 'Solana',
+            'BNB': 'BNB',
+            'XRP': 'Ripple',
+            'TON': 'Toncoin',
+            'AVAX': 'Avalanche',
+            'TRX': 'Tron',
+            'ADA': 'Cardano',
+            'DOGE': 'Dogecoin',
+            'USDC': 'USD Coin',
+          };
+
+          txs.push({
+            id: swap.hash,
+            type: 'swap',
+            asset: nameMap[fromSymbol] || fromSymbol,
+            symbol: fromSymbol,
+            amount: formatSwapAmount(swap.amountIn, fromSymbol),
+            value: `→ ${formatSwapAmount(swap.amountOut, toSymbol)} ${toSymbol}`,
+            date: new Date(Number(swap.timestamp) * 1000).toLocaleString(),
+            status: 'completed',
+            toAsset: nameMap[toSymbol] || toSymbol,
+            toSymbol: toSymbol,
+            txHash: swap.hash
           });
-        }
+        });
       } catch (err) {
         console.error('Error loading swap transactions:', err);
       }
@@ -174,7 +200,7 @@ export const TransactionPage: React.FC = () => {
     // Refresh every 10 seconds to catch new trades
     const interval = setInterval(loadTransactions, 10000);
     return () => clearInterval(interval);
-  }, [address]);
+  }, [address, swapTransactions]);
 
   // Fallback demo data if no wallet connected
   const demoTransactions: Transaction[] = [
