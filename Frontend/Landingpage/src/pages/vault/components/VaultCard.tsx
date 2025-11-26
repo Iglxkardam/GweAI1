@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaClock, FaFire } from 'react-icons/fa';
+
 import { LockedAsset } from '../types/vault.types';
 import { calculateTimeRemaining, calculateProgress, calculateCurrentYield, getStatusColor, getAPYColor } from '../utils/vaultCalculations';
 
@@ -47,22 +47,21 @@ export const VaultCard: React.FC<VaultCardProps> = ({ asset, onUnlock, onEarlyUn
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.01, y: -3 }}
-      className="bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/[0.08] hover:border-white/[0.15] transition-all duration-300 relative overflow-hidden group"
+      whileHover={{ scale: 1.005, y: -2 }}
+      className="bg-white/[0.03] backdrop-blur-sm rounded-lg p-3 border border-white/[0.08] hover:border-white/[0.15] transition-all duration-300 relative overflow-hidden group"
     >
       {/* Background Glow Effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
       <div className="relative z-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg flex items-center justify-center border border-white/[0.1]">
-              <img src={asset.tokenLogo} alt={asset.token} className="w-6 h-6" />
+        {/* Header - Compact */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg flex items-center justify-center border border-white/[0.1]">
+              <img src={asset.tokenLogo} alt={asset.token} className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">{asset.token}</h3>
-              <p className="text-gray-400 text-xs">{asset.strategy} Strategy</p>
+              <h3 className="text-base font-bold text-white">{asset.token}</h3>
             </div>
           </div>
           <div className="text-right">
@@ -70,107 +69,79 @@ export const VaultCard: React.FC<VaultCardProps> = ({ asset, onUnlock, onEarlyUn
           </div>
         </div>
 
-        {/* Amount */}
-        <div className="mb-3">
-          <p className="text-gray-400 text-[10px] mb-1">Staked Amount</p>
-          <div className="flex items-baseline space-x-1.5 min-w-0">
-            <span className="text-2xl font-bold text-white truncate">{asset.amount.toFixed(4)}</span>
-            <span className="text-sm text-white font-medium flex-shrink-0">{asset.token}</span>
-          </div>
-          <p className="text-blue-400 text-xs font-medium mt-0.5 truncate">
-            ≈ ${asset.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-        </div>
-
-        {/* APY & Progress Stats */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="bg-white/[0.03] rounded-lg p-2.5 border border-white/[0.05]">
-            <div className="flex items-center space-x-1.5 mb-1">
-              <FaFire className="text-orange-400 text-xs" />
-              <p className="text-gray-400 text-[10px]">APY</p>
-            </div>
-            <p className={`text-lg font-bold ${apyColor} truncate`}>{asset.apy.toFixed(2)}%</p>
-          </div>
-          
-          <div className="bg-white/[0.03] rounded-lg p-2.5 border border-white/[0.05]">
-            <div className="flex items-center space-x-1.5 mb-1">
-              <FaClock className="text-blue-400 text-xs" />
-              <p className="text-gray-400 text-[10px]">Progress</p>
-            </div>
-            <p className="text-white font-bold text-lg">{progress.toFixed(0)}%</p>
-          </div>
-        </div>
-
-        {/* Time Remaining Banner */}
-        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg p-3 mb-3">
-          <div className="flex items-center justify-between">
+        {/* Amount & Stats - Compact */}
+        <div className="mb-2">
+          <div className="flex items-baseline justify-between">
             <div>
-              <p className="text-gray-400 text-[10px] mb-0.5">Time Remaining</p>
+              <p className="text-gray-400 text-[9px] mb-0.5">Staked</p>
+              <div className="flex items-baseline space-x-1">
+                <span className="text-lg font-bold text-white">{asset.amount.toFixed(4)}</span>
+                <span className="text-xs text-white/70">{asset.token}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-gray-400 text-[9px] mb-0.5">APY</p>
+              <p className={`text-lg font-bold ${apyColor}`}>{asset.apy.toFixed(1)}%</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Time & Progress - Compact */}
+        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg p-2 mb-2">
+          <div className="flex items-center justify-between mb-1.5">
+            <div>
               {timeRemaining.isExpired ? (
-                <p className="text-green-400 font-bold text-base">Unlocked!</p>
+                <p className="text-green-400 font-bold text-sm">Unlocked!</p>
               ) : (
-                <div className="flex items-center space-x-1">
-                  <span className="text-white font-mono text-base font-bold">{timeRemaining.days}</span>
-                  <span className="text-gray-400 text-xs">d</span>
-                  <span className="text-white font-mono text-base font-bold">{timeRemaining.hours}</span>
-                  <span className="text-gray-400 text-xs">h</span>
-                  <span className="text-white font-mono text-base font-bold">{timeRemaining.minutes}</span>
-                  <span className="text-gray-400 text-xs">m</span>
+                <div className="flex items-center space-x-0.5">
+                  <span className="text-white font-mono text-sm font-bold">{timeRemaining.days}</span>
+                  <span className="text-gray-400 text-[10px]">d</span>
+                  <span className="text-white font-mono text-sm font-bold">{timeRemaining.hours}</span>
+                  <span className="text-gray-400 text-[10px]">h</span>
                 </div>
               )}
             </div>
             <div className="text-right">
-              <p className="text-gray-400 text-[10px] mb-0.5">Unlock Date</p>
-              <p className="text-white font-semibold text-xs">
-                {new Date(asset.unlockDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </p>
+              <p className="text-white/70 text-xs">{progress.toFixed(0)}%</p>
             </div>
           </div>
           
-          {/* Progress Bar */}
-          <div className="mt-2">
-            <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
-              />
-            </div>
+          {/* Progress Bar - Compact */}
+          <div className="h-1 bg-white/[0.05] rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
+            />
           </div>
         </div>
 
-        {/* Yield Information */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="bg-white/[0.03] rounded-lg p-2.5 border border-white/[0.05]">
-            <p className="text-gray-400 text-[10px] mb-1">Earned Yield</p>
-            <p className="text-green-400 font-bold text-sm truncate">
+        {/* Yield - Compact */}
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="bg-white/[0.03] rounded-lg p-2 border border-white/[0.05]">
+            <p className="text-gray-400 text-[9px] mb-0.5">Earned</p>
+            <p className="text-green-400 font-bold text-xs truncate">
               +{currentYield.toFixed(4)}
             </p>
-            <p className="text-gray-400 text-[10px] mt-0.5 truncate">
-              ≈ ${(currentYield * (asset.usdValue / asset.amount)).toFixed(2)}
-            </p>
           </div>
-          <div className="bg-white/[0.03] rounded-lg p-2.5 border border-white/[0.05]">
-            <p className="text-gray-400 text-[10px] mb-1">Total Value</p>
-            <p className="text-blue-400 font-bold text-sm truncate">
+          <div className="bg-white/[0.03] rounded-lg p-2 border border-white/[0.05]">
+            <p className="text-gray-400 text-[9px] mb-0.5">At Unlock</p>
+            <p className="text-blue-400 font-bold text-xs truncate">
               {(asset.amount + asset.totalYield).toFixed(4)}
-            </p>
-            <p className="text-gray-400 text-[10px] mt-0.5 truncate">
-              {asset.token}
             </p>
           </div>
         </div>
 
-        {/* Action Button */}
+        {/* Action Button - Compact */}
         {asset.status === 'unlocked' && (
           <motion.button
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onUnlock?.(asset.id)}
-            className="w-full py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 border border-green-500/30 rounded-lg text-white font-semibold text-sm transition-all duration-200 relative overflow-hidden group"
+            className="w-full py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 border border-green-500/30 rounded-lg text-white font-semibold text-xs transition-all duration-200 relative overflow-hidden group"
           >
-            <span>Claim {(asset.amount + asset.totalYield).toFixed(4)} {asset.token}</span>
+            <span>Claim {(asset.amount + currentYield).toFixed(4)} {asset.token}</span>
             
             {/* Animated shimmer */}
             <motion.div
@@ -189,10 +160,10 @@ export const VaultCard: React.FC<VaultCardProps> = ({ asset, onUnlock, onEarlyUn
         )}
 
         {asset.status === 'unlocking' && (
-          <div className="w-full py-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg">
+          <div className="w-full py-2 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg">
             <div className="flex items-center justify-center space-x-2">
-              <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
-              <span className="text-yellow-400 font-semibold text-sm">Preparing to Unlock...</span>
+              <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse"></div>
+              <span className="text-yellow-400 font-semibold text-xs">Preparing...</span>
             </div>
           </div>
         )}
@@ -202,9 +173,9 @@ export const VaultCard: React.FC<VaultCardProps> = ({ asset, onUnlock, onEarlyUn
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onEarlyUnlock?.(asset.id)}
-            className="w-full py-3 bg-gradient-to-r from-orange-500/20 to-red-500/20 hover:from-orange-500/30 hover:to-red-500/30 border border-orange-500/30 rounded-lg text-white font-semibold text-sm transition-all duration-200 relative overflow-hidden group"
+            className="w-full py-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 hover:from-orange-500/30 hover:to-red-500/30 border border-orange-500/30 rounded-lg text-white font-semibold text-xs transition-all duration-200 relative overflow-hidden group"
           >
-            <span>Early Unlock (Penalty Applies)</span>
+            <span>Early Unlock</span>
             
             {/* Animated shimmer */}
             <motion.div

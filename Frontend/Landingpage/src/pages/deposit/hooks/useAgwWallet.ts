@@ -352,7 +352,9 @@ export const useAgwWallet = () => {
   const sendTransaction = useCallback(async (
     to: string,
     value: string,
-    _tokenType: 'ETH' | 'USDC' = 'ETH'
+    _tokenType: 'ETH' | 'USDC' = 'ETH',
+    data?: string,
+    skipSave?: boolean
   ) => {
     if (!primaryWallet) {
       throw new Error('No wallet connected');
@@ -364,17 +366,36 @@ export const useAgwWallet = () => {
       const walletClient = await getCachedWalletClient();
       
       if (walletClient) {
-        // Use viem's wallet client directly
-        const hash = await walletClient.sendTransaction({
+        // Log transaction details
+        console.log('sendTransaction called:', {
+          to,
+          value,
+          amountInWei: amountInWei.toString(),
+          data,
+          hasData: !!data,
+          dataLength: data?.length
+        });
+        
+        // Build transaction object
+        const txParams: any = {
           to: to as `0x${string}`,
           value: amountInWei,
-        });
+        };
+        
+        // Only add data if it exists and is valid
+        if (data && data.startsWith('0x') && data.length > 2) {
+          txParams.data = data as `0x${string}`;
+          console.log('Adding data to transaction:', data);
+        }
+        
+        // Use viem's wallet client directly
+        const hash = await walletClient.sendTransaction(txParams);
         
         // Use singleton publicClient (already cached)
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         
-        // Save to localStorage only after confirmation
-        if (primaryWallet.address && receipt.status === 'success') {
+        // Save to localStorage only after confirmation (skip for vault transactions)
+        if (!skipSave && primaryWallet.address && receipt.status === 'success') {
           const storageKey = `wallet_${primaryWallet.address.toLowerCase()}_transactions`;
           const storedTxs = localStorage.getItem(storageKey);
           const txs = storedTxs ? JSON.parse(storedTxs) : [];
@@ -407,13 +428,14 @@ export const useAgwWallet = () => {
         const hash = await connectorWalletClient.sendTransaction({
           to: to as `0x${string}`,
           value: amountInWei,
+          data: data as `0x${string}` | undefined,
         });
         
         // Use singleton publicClient
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         
-        // Save to localStorage only after confirmation
-        if (primaryWallet.address && receipt.status === 'success') {
+        // Save to localStorage only after confirmation (skip for vault transactions)
+        if (!skipSave && primaryWallet.address && receipt.status === 'success') {
           const storageKey = `wallet_${primaryWallet.address.toLowerCase()}_transactions`;
           const storedTxs = localStorage.getItem(storageKey);
           const txs = storedTxs ? JSON.parse(storedTxs) : [];

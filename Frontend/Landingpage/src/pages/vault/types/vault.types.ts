@@ -1,5 +1,6 @@
 export interface LockedAsset {
   id: string;
+  stakeId?: number; // On-chain stake ID from VaultStaking contract
   token: string;
   tokenLogo: string;
   amount: number;
@@ -46,4 +47,18 @@ export interface VaultFilter {
   status: 'all' | 'locked' | 'unlocking' | 'unlocked';
   token: 'all' | string;
   sortBy: 'apy' | 'amount' | 'timeLeft' | 'yield';
+}
+
+export interface VaultHistory {
+  id: string;
+  type: 'stake' | 'unstake' | 'early_unstake';
+  token: string;
+  tokenLogo: string;
+  amount: number;
+  timestamp: number;
+  txHash: string;
+  penalty?: number;
+  apy?: number;
+  lockDuration?: number;
+  status: 'completed' | 'pending' | 'failed';
 }

@@ -20,29 +20,33 @@ export const EarlyUnlockModal: React.FC<EarlyUnlockModalProps> = ({
 
   if (!asset) return null;
 
-  // Calculate penalty based on remaining time
+  // Calculate penalty based on contract logic
   const calculatePenalty = () => {
     const now = Date.now();
     const totalDuration = asset.unlockDate - asset.lockDate;
+    const elapsedTime = now - asset.lockDate;
     const remaining = asset.unlockDate - now;
     
     // Percentage of time remaining
     const remainingPercent = (remaining / totalDuration) * 100;
     
-    // Penalty APY calculation: proportional to remaining time
-    // If 50% time remaining, penalty is 50% of APY
+    // User earns yield proportionally to time elapsed (matches contract)
+    const earnedYield = (asset.totalYield * elapsedTime) / totalDuration;
+    
+    // Penalty is the unearned yield (deducted from principal as per contract)
+    const penaltyAmount = asset.totalYield - earnedYield;
+    
+    // User gets principal MINUS penalty (unearned yield taken from principal)
+    const receiveAmount = asset.amount - penaltyAmount;
+    
+    // Calculate effective penalty APY for display
     const penaltyAPY = (asset.apy * remainingPercent) / 100;
-    
-    // Penalty amount: (penaltyAPY / APY) * totalYield
-    const penaltyAmount = (penaltyAPY / asset.apy) * asset.totalYield;
-    
-    // Amount user will receive
-    const receiveAmount = asset.amount + asset.earnedYield - penaltyAmount;
     
     return {
       penaltyAPY: penaltyAPY.toFixed(2),
       penaltyAmount: penaltyAmount.toFixed(4),
       receiveAmount: receiveAmount.toFixed(4),
+      earnedYield: earnedYield.toFixed(4),
       remainingDays: Math.ceil(remaining / (1000 * 60 * 60 * 24)),
       remainingPercent: remainingPercent.toFixed(1)
     };
@@ -52,13 +56,13 @@ export const EarlyUnlockModal: React.FC<EarlyUnlockModalProps> = ({
 
   const handleUnlock = async () => {
     setProcessing(true);
-    
-    // Simulate transaction
-    setTimeout(() => {
+    try {
+      await onConfirm(asset.id);
       setProcessing(false);
-      onConfirm(asset.id);
-      onClose();
-    }, 2000);
+    } catch (error) {
+      console.error('Early unlock failed:', error);
+      setProcessing(false);
+    }
   };
 
   return (
@@ -152,22 +156,29 @@ export const EarlyUnlockModal: React.FC<EarlyUnlockModalProps> = ({
                 className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/20 p-4 mb-6 space-y-2"
               >
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Locked Amount</span>
+                  <span className="text-gray-400">Principal (Staked)</span>
                   <span className="text-white font-semibold">{asset.amount.toFixed(4)} {asset.token}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Earned Yield</span>
-                  <span className="text-green-400">+{asset.earnedYield.toFixed(4)} {asset.token}</span>
+                  <span className="text-gray-400">Total Yield (if held)</span>
+                  <span className="text-gray-400">+{asset.totalYield.toFixed(4)} {asset.token}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Penalty ({penalty.remainingPercent}% × {asset.apy}%)</span>
+                  <span className="text-gray-400">Earned Yield (time elapsed)</span>
+                  <span className="text-green-400">+{penalty.earnedYield} {asset.token}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Unearned Yield Penalty</span>
                   <span className="text-red-400 font-semibold">-{penalty.penaltyAmount} {asset.token}</span>
                 </div>
                 <div className="h-px bg-white/10 my-2"></div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">You Receive</span>
-                  <span className="text-green-400 font-bold text-lg">{penalty.receiveAmount} {asset.token}</span>
+                  <span className="text-orange-400 font-bold text-lg">{penalty.receiveAmount} {asset.token}</span>
                 </div>
+                <p className="text-gray-500 text-[10px] mt-2">
+                  ⚠️ Penalty deducted from principal ({penalty.remainingPercent}% time remaining)
+                </p>
               </motion.div>
 
               {/* Unlock Button */}

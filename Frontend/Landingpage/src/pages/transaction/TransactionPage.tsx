@@ -31,7 +31,7 @@ const getTokenSymbol = (address: string): string => {
 
 interface Transaction {
   id: string;
-  type: 'buy' | 'sell' | 'withdrawal' | 'swap';
+  type: 'buy' | 'sell' | 'withdrawal' | 'swap' | 'vault_stake' | 'vault_unstake' | 'vault_early_unstake';
   asset: string;
   symbol: string;
   amount: string;
@@ -41,11 +41,14 @@ interface Transaction {
   toAsset?: string; // For swap transactions
   toSymbol?: string;
   txHash?: string;
+  apy?: number; // For vault transactions
+  lockDuration?: number; // For vault transactions
+  penalty?: number; // For early vault unstake
 }
 
 export const TransactionPage: React.FC = () => {
   const { address, connected } = useAgwWallet();
-  const [filter, setFilter] = useState<'all' | 'buy' | 'sell' | 'withdrawal' | 'swap'>('all');
+  const [filter, setFilter] = useState<'all' | 'buy' | 'sell' | 'withdrawal' | 'swap' | 'vault'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const ITEMS_PER_PAGE = 10;
@@ -140,6 +143,57 @@ export const TransactionPage: React.FC = () => {
         }
       } catch (err) {
         console.error('Error loading wallet transactions:', err);
+      }
+
+      // Load vault transactions from localStorage
+      try {
+        const vaultKey = `vaultHistory_${address.toLowerCase()}`;
+        const vaultData = localStorage.getItem(vaultKey);
+        if (vaultData) {
+          const vaultTxs = JSON.parse(vaultData);
+          vaultTxs.forEach((vaultTx: any) => {
+            let txType: Transaction['type'] = 'vault_stake';
+            if (vaultTx.type === 'unstake') txType = 'vault_unstake';
+            if (vaultTx.type === 'early_unstake') txType = 'vault_early_unstake';
+            
+            const nameMap: Record<string, string> = {
+              'BTC': 'Bitcoin',
+              'ETH': 'Ethereum',
+              'SOL': 'Solana',
+              'BNB': 'BNB',
+              'XRP': 'Ripple',
+              'TON': 'Toncoin',
+              'AVAX': 'Avalanche',
+              'TRX': 'Tron',
+              'ADA': 'Cardano',
+              'DOGE': 'Dogecoin',
+              'USDC': 'USD Coin',
+            };
+            
+            const value = vaultTx.penalty 
+              ? `${vaultTx.amount.toFixed(4)} (Penalty: ${vaultTx.penalty.toFixed(4)})`
+              : vaultTx.lockDuration 
+                ? `${vaultTx.lockDuration} days @ ${vaultTx.apy?.toFixed(2)}% APY`
+                : `${vaultTx.amount.toFixed(4)}`;
+            
+            txs.push({
+              id: vaultTx.id || vaultTx.txHash,
+              type: txType,
+              asset: nameMap[vaultTx.token] || vaultTx.token,
+              symbol: vaultTx.token,
+              amount: vaultTx.amount.toFixed(vaultTx.token === 'BTC' ? 8 : vaultTx.token === 'USDC' ? 2 : 4),
+              value: value,
+              date: new Date(vaultTx.timestamp).toLocaleString(),
+              status: vaultTx.status === 'completed' ? 'completed' : vaultTx.status === 'pending' ? 'pending' : 'processing',
+              txHash: vaultTx.txHash,
+              apy: vaultTx.apy,
+              lockDuration: vaultTx.lockDuration,
+              penalty: vaultTx.penalty
+            });
+          });
+        }
+      } catch (err) {
+        console.error('Error loading vault transactions:', err);
       }
 
       // Load real swap transactions from blockchain
@@ -343,9 +397,13 @@ export const TransactionPage: React.FC = () => {
     console.log('[TransactionPage] Using:', connected ? 'REAL DATA' : 'DEMO DATA');
   }, [connected, address, allTransactions]);
 
-  const filteredTransactions = transactions.filter(tx => 
-    filter === 'all' || tx.type === filter
-  );
+  const filteredTransactions = transactions.filter(tx => {
+    if (filter === 'all') return true;
+    if (filter === 'vault') {
+      return tx.type === 'vault_stake' || tx.type === 'vault_unstake' || tx.type === 'vault_early_unstake';
+    }
+    return tx.type === filter;
+  });
 
   // Pagination
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
@@ -479,6 +537,16 @@ export const TransactionPage: React.FC = () => {
               >
                 Withdrawal
               </button>
+              <button
+                onClick={() => { setFilter('vault'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all duration-200 border ${
+                  filter === 'vault'
+                    ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                    : 'bg-white/[0.03] text-gray-400 hover:bg-white/[0.08] border-white/[0.08]'
+                }`}
+              >
+                Vault
+              </button>
             </div>
           </div>
         </motion.div>
@@ -515,9 +583,9 @@ export const TransactionPage: React.FC = () => {
                   key={transaction.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center justify-between p-3 bg-white/[0.03] rounded-lg border border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12] transition-all duration-200"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-white/[0.03] rounded-lg border border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12] transition-all duration-200"
                 >
-                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1 w-full">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
                       transaction.type === 'buy'
                         ? 'bg-gradient-to-br from-green-400 to-green-500'
@@ -525,6 +593,12 @@ export const TransactionPage: React.FC = () => {
                         ? 'bg-gradient-to-br from-red-400 to-red-500'
                         : transaction.type === 'swap'
                         ? 'bg-gradient-to-br from-blue-400 to-blue-500'
+                        : transaction.type === 'vault_stake'
+                        ? 'bg-gradient-to-br from-yellow-400 to-yellow-500'
+                        : transaction.type === 'vault_unstake'
+                        ? 'bg-gradient-to-br from-green-400 to-green-500'
+                        : transaction.type === 'vault_early_unstake'
+                        ? 'bg-gradient-to-br from-orange-400 to-orange-500'
                         : 'bg-gradient-to-br from-purple-400 to-purple-500'
                     }`}>
                       {transaction.type === 'buy' ? (
@@ -533,38 +607,85 @@ export const TransactionPage: React.FC = () => {
                         <FaArrowDown className="text-white text-sm" />
                       ) : transaction.type === 'swap' ? (
                         <FaExchangeAlt className="text-white text-sm" />
+                      ) : transaction.type.startsWith('vault_') ? (
+                        <FaWallet className="text-white text-sm" />
                       ) : (
                         <FaWallet className="text-white text-sm" />
                       )}
                     </div>
                     
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-white text-sm">{transaction.asset}</h3>
-                        <span className="px-2 py-0.5 bg-white/10 text-white/80 text-[10px] font-mono rounded">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded flex-shrink-0 ${
+                          transaction.type === 'buy'
+                            ? 'bg-green-500/20 text-green-400'
+                            : transaction.type === 'sell'
+                            ? 'bg-red-500/20 text-red-400'
+                            : transaction.type === 'swap'
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : transaction.type === 'withdrawal'
+                            ? 'bg-purple-500/20 text-purple-400'
+                            : transaction.type === 'vault_stake'
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : transaction.type === 'vault_unstake'
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-orange-500/20 text-orange-400'
+                        }`}>
+                          {transaction.type === 'buy' ? 'BUY' :
+                           transaction.type === 'sell' ? 'SELL' :
+                           transaction.type === 'swap' ? 'SWAP' :
+                           transaction.type === 'withdrawal' ? 'WITHDRAW' :
+                           transaction.type === 'vault_stake' ? 'VAULT STAKE' :
+                           transaction.type === 'vault_unstake' ? 'VAULT UNSTAKE' :
+                           'EARLY UNLOCK'}
+                        </span>
+                        <h3 className="font-semibold text-white text-sm truncate">{transaction.asset}</h3>
+                        <span className="px-2 py-0.5 bg-white/10 text-white/80 text-[10px] font-mono rounded flex-shrink-0">
                           {transaction.symbol}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-400">
-                        {transaction.type === 'buy' ? 'Bought' : transaction.type === 'sell' ? 'Sold' : transaction.type === 'swap' ? `Swapped to ${transaction.toSymbol}` : 'Withdrew'} {transaction.amount} {transaction.symbol}
+                      <p className="text-xs text-gray-400 truncate">
+                        {transaction.amount} {transaction.symbol}
+                        {transaction.type === 'swap' && transaction.toSymbol && (
+                          <span className="text-blue-400"> → {transaction.value}</span>
+                        )}
+                        {transaction.type !== 'swap' && !transaction.type.startsWith('vault_') && (
+                          <span className="text-gray-500"> • {transaction.value}</span>
+                        )}
                       </p>
-                      <p className="text-[10px] text-gray-500">{transaction.date}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{transaction.date}</p>
                     </div>
                   </div>
 
-                  <div className="text-right space-y-1 flex-shrink-0 ml-2">
-                    <p className="font-semibold text-white text-sm">{transaction.value}</p>
-                    {getStatusBadge(transaction.status)}
-                    {transaction.txHash && (
-                      <a
-                        href={`https://sepolia.basescan.org/tx/${transaction.txHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-blue-400 hover:text-blue-300 underline"
-                      >
-                        View TX
-                      </a>
-                    )}
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2 w-full sm:w-auto flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      {transaction.type === 'vault_stake' && transaction.lockDuration && transaction.apy && (
+                        <p className="text-xs text-white font-medium">
+                          {transaction.lockDuration}d @ {transaction.apy.toFixed(1)}% APY
+                        </p>
+                      )}
+                      {transaction.type === 'vault_early_unstake' && transaction.penalty && (
+                        <p className="text-xs text-orange-400 font-medium">
+                          Penalty: {transaction.penalty.toFixed(4)}
+                        </p>
+                      )}
+                      {!transaction.type.startsWith('vault_') && (
+                        <p className="text-xs text-white font-medium truncate max-w-[120px]">{transaction.value}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(transaction.status)}
+                      {transaction.txHash && (
+                        <a
+                          href={`https://sepolia.basescan.org/tx/${transaction.txHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-blue-400 hover:text-blue-300 underline whitespace-nowrap"
+                        >
+                          View TX
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
                 ))}

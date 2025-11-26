@@ -1,11 +1,11 @@
 ﻿import React from 'react';
 import { motion } from 'framer-motion';
-import { FaChartLine, FaWallet, FaHistory, FaExchangeAlt, FaLock, FaMoneyBillWave, FaCrown, FaChartBar } from 'react-icons/fa';
+import { FaChartLine, FaWallet, FaHistory, FaExchangeAlt, FaLock, FaMoneyBillWave, FaCrown, FaChartBar, FaFaucet } from 'react-icons/fa';
 
-type Page = 'landing' | 'dca' | 'market' | 'portfolio' | 'transactions' | 'swap' | 'deposit' | 'vault' | 'subscription';
+type Page = 'landing' | 'dca' | 'market' | 'portfolio' | 'transactions' | 'swap' | 'deposit' | 'vault' | 'subscription' | 'faucet';
 
 interface AppNavbarProps {
-  currentPage: 'dca' | 'market' | 'portfolio' | 'transactions' | 'swap' | 'deposit' | 'vault' | 'subscription';
+  currentPage: 'dca' | 'market' | 'portfolio' | 'transactions' | 'swap' | 'deposit' | 'vault' | 'subscription' | 'faucet';
   setCurrentPage: (page: Page) => void;
   sidebarOpen?: boolean;
 }
@@ -115,6 +115,18 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentPage, setCurrentPag
             >
               <FaLock className="text-sm" />
               <span className="hidden lg:inline">Vault</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentPage('faucet')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 font-medium text-sm ${
+                isActive('faucet')
+                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <FaFaucet className="text-sm" />
+              <span className="hidden lg:inline">Faucet</span>
             </button>
           </div>
 

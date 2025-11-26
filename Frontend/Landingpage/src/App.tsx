@@ -30,8 +30,9 @@ const SwapPage = lazy(() => import('./pages/swap/SwapPage').then(m => ({ default
 const DepositPage = lazy(() => import('./pages/deposit/DepositPage').then(m => ({ default: m.DepositPage })));
 const VaultPage = lazy(() => import('./pages/vault/VaultPage').then(m => ({ default: m.VaultPage })));
 const SubscriptionPage = lazy(() => import('./pages/subscription/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
+const FaucetPage = lazy(() => import('./pages/faucet/FaucetPage').then(m => ({ default: m.FaucetPage })));
 
-type Page = 'landing' | 'dca' | 'market' | 'portfolio' | 'transactions' | 'swap' | 'deposit' | 'vault' | 'subscription';
+type Page = 'landing' | 'dca' | 'market' | 'portfolio' | 'transactions' | 'swap' | 'deposit' | 'vault' | 'subscription' | 'faucet';
 type TradingPair = 'BTC/USDC' | 'ETH/USDC' | 'XRP/USDC' | 'BNB/USDC' | 'SOL/USDC' | 'DOGE/USDC' | 'ADA/USDC' | 'TRX/USDC' | 'AVAX/USDC' | 'TON/USDC';
 
 const App = () => {
@@ -77,6 +78,7 @@ const App = () => {
       case 'deposit':
       case 'vault':
       case 'subscription':
+      case 'faucet':
         return (
           <>
             <AppNavbar 
@@ -103,6 +105,7 @@ const App = () => {
                 {currentPage === 'deposit' && <DepositPage />}
                 {currentPage === 'vault' && <VaultPage />}
                 {currentPage === 'subscription' && <SubscriptionPage />}
+                {currentPage === 'faucet' && <FaucetPage />}
               </div>
             </Suspense>
           </>

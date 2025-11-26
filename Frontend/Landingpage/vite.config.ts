@@ -92,7 +92,7 @@ export default defineConfig({
   },
   // Performance improvements
   server: {
-    port: 5180,
+    port: 5181,
     strictPort: false,
     hmr: {
       overlay: false

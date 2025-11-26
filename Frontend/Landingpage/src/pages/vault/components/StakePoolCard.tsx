@@ -82,7 +82,7 @@ export const StakePoolCard: React.FC<StakePoolCardProps> = ({ pool, onStake }) =
             </div>
             <div className="text-right">
               <p className="text-gray-400 text-xs mb-1">Your Stake</p>
-              <p className="text-white font-bold text-lg">0.00 {pool.token}</p>
+              <p className="text-white font-bold text-lg">{pool.totalStaked.toFixed(4)} {pool.token}</p>
             </div>
           </div>
         </div>

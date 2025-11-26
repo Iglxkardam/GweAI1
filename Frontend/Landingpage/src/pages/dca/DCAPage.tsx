@@ -14,8 +14,7 @@ import {
   clearCurrentChatId,
   generateChatId
 } from '../../utils/chatStorage';
-import { useSubscription } from '../subscription/hooks/useSubscription';
-import { PlanType } from '../subscription/services/contractService';
+import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 
 interface Message {
   id: string;
@@ -31,7 +30,7 @@ interface DCAPageProps {
 }
 
 export const DCAPage: React.FC<DCAPageProps> = ({ onSidebarToggle }) => {
-  const { isConnected, subscription, isLoading, address } = useSubscription();
+  const { connected: isConnected, address } = useAgwWallet();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -59,7 +58,7 @@ export const DCAPage: React.FC<DCAPageProps> = ({ onSidebarToggle }) => {
       const existingChatId = getCurrentChatId(address);
       
       if (existingChatId) {
-        const conversation = getConversation(existingChatId, address);
+        const conversation = getConversation(existingChatId, address || undefined);
         if (conversation && conversation.messages.length > 0) {
           setCurrentChatIdState(existingChatId);
           setMessages(conversation.messages);
@@ -88,16 +87,10 @@ export const DCAPage: React.FC<DCAPageProps> = ({ onSidebarToggle }) => {
 
   // Handle chat history selection - optimized for smooth transitions
   const handleSelectChat = (chatId: string) => {
-    // ⚠️ SECURITY: Block access if not subscribed
-    if (!isConnected || !subscription || subscription.planType === PlanType.FREE) {
-      console.warn('Access denied: Premium subscription required');
-      return;
-    }
-
     // Prevent re-loading the same chat
     if (chatId === currentChatId || isLoadingChat) return;
     
-    const conversation = getConversation(chatId, address);
+    const conversation = getConversation(chatId, address || undefined);
     
     if (conversation) {
       // Show loading state immediately
@@ -105,7 +98,7 @@ export const DCAPage: React.FC<DCAPageProps> = ({ onSidebarToggle }) => {
       
       // Update state in batch to prevent multiple re-renders
       setCurrentChatIdState(chatId);
-      setCurrentChatId(chatId, address);
+      setCurrentChatId(chatId, address || undefined);
       
       // Clear current messages first for instant feedback
       setMessages([]);
@@ -132,12 +125,6 @@ export const DCAPage: React.FC<DCAPageProps> = ({ onSidebarToggle }) => {
 
   // Handle new chat - don't create until user sends first message
   const handleNewChat = () => {
-    // ⚠️ SECURITY: Block access if not subscribed
-    if (!isConnected || !subscription || subscription.planType === PlanType.FREE) {
-      console.warn('Access denied: Premium subscription required');
-      return;
-    }
-
     setCurrentChatIdState(null);
     setMessages([]);
     setIsExpanded(false);
@@ -145,16 +132,11 @@ export const DCAPage: React.FC<DCAPageProps> = ({ onSidebarToggle }) => {
     setConversationHistory([]);
     setLatestMessageId(null);
     // Clear the stored current chat ID so new chat state persists when navigating
-    clearCurrentChatId(address);
+    clearCurrentChatId(address || undefined);
   };
 
   // Handle DCA plan approval
   const handleApproveDCA = (params: DCAParameters) => {
-    // ⚠️ SECURITY: Block access if not subscribed
-    if (!isConnected || !subscription || subscription.planType === PlanType.FREE) {
-      console.warn('Access denied: Premium subscription required');
-      return;
-    }
     // Create AI confirmation message
     const confirmationText = `✅ **DCA Plan Approved!**
 
@@ -187,7 +169,7 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
     
     // Save to conversation history
     if (currentChatId) {
-      addMessageToConversation(currentChatId, confirmationMessage, address);
+      addMessageToConversation(currentChatId, confirmationMessage, address || undefined);
     }
 
     console.log('DCA Plan Approved:', params);
@@ -196,12 +178,6 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
 
   // Handle DCA card cancellation
   const handleCancelDCA = (messageId: string) => {
-    // ⚠️ SECURITY: Block access if not subscribed
-    if (!isConnected || !subscription || subscription.planType === PlanType.FREE) {
-      console.warn('Access denied: Premium subscription required');
-      return;
-    }
-
     // Remove the DCA card message
     setMessages(prev => prev.filter(msg => msg.id !== messageId));
     
@@ -216,7 +192,7 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
     setMessages(prev => [...prev, cancellationMessage]);
     
     if (currentChatId) {
-      addMessageToConversation(currentChatId, cancellationMessage, address);
+      addMessageToConversation(currentChatId, cancellationMessage, address || undefined);
     }
   };
 
@@ -240,16 +216,10 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
     e.preventDefault();
     if (!inputMessage.trim() || isTyping) return;
 
-    // ⚠️ SECURITY: Block access if not subscribed
-    if (!isConnected || !subscription || subscription.planType === PlanType.FREE) {
-      console.warn('Access denied: Premium subscription required');
-      return;
-    }
-
     // Create new chat if none exists (first message)
     let chatId = currentChatId;
     if (!chatId) {
-      const newConv = createNewConversation(address);
+      const newConv = createNewConversation(address || undefined);
       chatId = newConv.id;
       setCurrentChatIdState(chatId);
     }
@@ -272,7 +242,7 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
     setIsTyping(true);
 
     // Save user message to storage
-    addMessageToConversation(chatId, userMessage, address);
+    addMessageToConversation(chatId, userMessage, address || undefined);
 
     // Check if this is a DCA request
     const dcaRequest = parseDCARequest(userInput);
@@ -289,7 +259,7 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
         };
         
         setMessages(prev => [...prev, dcaCardMessage]);
-        addMessageToConversation(chatId, dcaCardMessage, address);
+        addMessageToConversation(chatId, dcaCardMessage, address || undefined);
         setIsTyping(false);
       }, 1500);
       
@@ -345,7 +315,7 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
       }
       
       // Save AI response to storage
-      addMessageToConversation(chatId, aiResponse, address);
+      addMessageToConversation(chatId, aiResponse, address || undefined);
     } catch (error) {
       console.error('Error generating AI response:', error);
       
@@ -360,32 +330,11 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
       setMessages(prev => [...prev, errorResponse]);
       
       // Save error message to storage
-      addMessageToConversation(chatId, errorResponse, address);
+      addMessageToConversation(chatId, errorResponse, address || undefined);
     } finally {
       setIsTyping(false);
     }
   };
-
-  // Show loading state while checking subscription
-  if (isLoading) {
-    return (
-      <motion.div 
-        className="min-h-screen bg-black relative overflow-hidden flex items-center justify-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <StarfieldBackground optimized={true} />
-        <div className="relative z-10 text-center">
-          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Checking subscription status...</p>
-        </div>
-      </motion.div>
-    );
-  }
-
-  // ⚠️ Allow demo access for all users (can be restricted later for production)
-  // For full production: const hasFullAccess = isConnected && subscription && subscription.planType !== PlanType.FREE;
-  const hasFullAccess = true; // Enable AI chat for demo/testing
 
   return (
     <motion.div 
@@ -400,16 +349,14 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
     >
-      {/* Chat History Sidebar - Only show if user has access */}
-      {hasFullAccess && (
-        <ChatHistorySidebar 
-          onSelectChat={handleSelectChat}
-          onNewChat={handleNewChat}
-          onSidebarToggle={handleSidebarToggle}
-          currentChatId={currentChatId}
-          walletAddress={address}
-        />
-      )}
+      {/* Chat History Sidebar */}
+      <ChatHistorySidebar 
+        onSelectChat={handleSelectChat}
+        onNewChat={handleNewChat}
+        onSidebarToggle={handleSidebarToggle}
+        currentChatId={currentChatId}
+        walletAddress={address || undefined}
+      />
 
       {/* Starfield background */}
       <StarfieldBackground optimized={true} />
@@ -457,61 +404,6 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
                     <p className="text-xs text-gray-400 mb-3 uppercase tracking-wider font-semibold">Available Features</p>
                     <div className="space-y-2">
                       {['Automated DCA Strategies', 'Advanced Portfolio Analytics', 'Priority Support'].map((feature, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          <span className="text-gray-300 text-sm">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-
-        {/* Free Plan - Second Priority (only shows when wallet is connected) */}
-        {isConnected && subscription && subscription.planType === PlanType.FREE && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/25 backdrop-blur-sm z-[100]"
-            />
-
-            {/* Modal */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-0 z-[101] flex items-center justify-center p-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="bg-black/80 backdrop-blur-xl rounded-2xl border border-white/[0.15] p-6 max-w-md w-full relative">
-                {/* Lock Icon */}
-                <div className="w-20 h-20 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
-                  <svg className="w-10 h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-
-                {/* Content */}
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold text-white mb-3">Premium Feature Locked</h2>
-                  <p className="text-gray-400 text-sm mb-6">
-                    Upgrade to a premium plan to unlock DCA automation, AI-powered strategies, and advanced trading features.
-                  </p>
-
-                  {/* Feature List */}
-                  <div className="bg-white/5 rounded-lg border border-white/10 p-4 text-left">
-                    <p className="text-xs text-gray-400 mb-3 uppercase tracking-wider font-semibold">Premium Features</p>
-                    <div className="space-y-2">
-                      {['Automated DCA Strategies',  'Advanced Portfolio Analytics', 'Priority Support'].map((feature, index) => (
                         <div key={index} className="flex items-center space-x-2">
                           <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -674,12 +566,12 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
                           value={inputMessage}
                           onChange={(e) => setInputMessage(e.target.value)}
                           placeholder="Ask AI anything..."
-                          disabled={!hasFullAccess}
+                          disabled={false}
                           className="w-full px-4 sm:px-6 py-3 sm:py-4 pr-12 sm:pr-14 text-sm sm:text-base bg-transparent border-none focus:outline-none text-white placeholder-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
                         />
                         <button
                           type="submit"
-                          disabled={!inputMessage.trim() || !hasFullAccess}
+                          disabled={!inputMessage.trim()}
                           className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 bg-emerald-400 text-white rounded-lg sm:rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
                         >
                           <FaPaperPlane className="text-xs sm:text-sm" />
@@ -1008,16 +900,16 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
                       <input
                         type="text"
                         value={inputMessage}
-                        onChange={(e) => hasFullAccess && setInputMessage(e.target.value)}
+                        onChange={(e) => setInputMessage(e.target.value)}
                         placeholder="Ask me about DCA strategies, investment plans, or crypto markets..."
-                        disabled={!hasFullAccess}
+                        disabled={false}
                         className="w-full px-5 py-4 text-base bg-transparent border-none focus:outline-none text-white placeholder-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
                       />
                       <motion.button
                         type="submit"
-                        whileHover={{ scale: hasFullAccess ? 1.02 : 1 }}
-                        whileTap={{ scale: hasFullAccess ? 0.98 : 1 }}
-                        disabled={!inputMessage.trim() || isTyping || !hasFullAccess}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={!inputMessage.trim() || isTyping}
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-emerald-400 text-white rounded-xl hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
                       >
                         <FaPaperPlane className="text-sm" />
@@ -1048,3 +940,4 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
     </motion.div>
   );
 };
+

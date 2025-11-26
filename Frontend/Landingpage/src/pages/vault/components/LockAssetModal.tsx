@@ -206,11 +206,9 @@ export const LockAssetModal: React.FC<LockAssetModalProps> = ({
                           <span className={`font-semibold text-xs ${isSelected ? 'text-white' : 'text-gray-300'}`}>
                             {duration.label}
                           </span>
-                          {duration.multiplier !== 1 && (
-                            <span className="text-[10px] text-green-400 font-medium">
-                              +{((duration.multiplier - 1) * 100).toFixed(0)}%
-                            </span>
-                          )}
+                          <span className={`text-[10px] font-medium ${isSelected ? 'text-green-400' : 'text-gray-400'}`}>
+                            {durationAPY.toFixed(1)}% APY
+                          </span>
                         </div>
                         <p className={`text-sm font-bold ${isSelected ? 'text-green-400' : 'text-gray-400'}`}>
                           {durationAPY.toFixed(1)}% APY

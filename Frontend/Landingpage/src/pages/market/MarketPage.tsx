@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { StarfieldBackground } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 import { useGlobalPrices } from '../../context/PriceContext';
-import { showWarningToast, showInfoToast } from '../../utils/toastHelper';
+import { showWarningToast, showInfoToast, showErrorToast } from '../../utils/toastHelper';
 
 // TypeScript declaration for TradingView widget
 declare global {
@@ -203,6 +203,12 @@ export const MarketPage: React.FC = () => {
       showWarningToast('Wallet Not Connected', 'Please connect your wallet first', 'Click "Connect Wallet" at the top');
       return;
     }
+
+    // Block ETH/USDC trading
+    if (selectedPair === 'ETH/USDC') {
+      showErrorToast(new Error('ETH trading is currently disabled'));
+      return;
+    }
     
     if (!amount) {
       showWarningToast('Amount Required', 'Please enter amount', 'Enter the amount you want to trade');
@@ -231,7 +237,7 @@ export const MarketPage: React.FC = () => {
     } else {
       const tokenNeeded = parseFloat(amount);
       const usdcReceived = tokenNeeded * realTimePrice;
-      const availableBalance = selectedPair === 'BTC/USDC' ? parseFloat(btcBalance) : selectedPair === 'ETH/USDC' ? parseFloat(ethBalance) : parseFloat(usdcBalance);
+      const availableBalance = selectedPair === 'BTC/USDC' ? parseFloat(btcBalance) : parseFloat(usdcBalance);
       if (availableBalance < tokenNeeded) {
         showWarningToast(
           `Insufficient ${pairSymbol} Balance`,
@@ -292,7 +298,7 @@ export const MarketPage: React.FC = () => {
                   className="bg-transparent text-white font-bold text-lg cursor-pointer focus:outline-none pr-8"
                 >
                   <option value="BTC/USDC" className="bg-gray-900">BTC/USDC</option>
-                  <option value="ETH/USDC" className="bg-gray-900">ETH/USDC</option>
+                  <option value="ETH/USDC" className="bg-gray-900" disabled>ETH/USDC (Disabled)</option>
                   <option value="XRP/USDC" className="bg-gray-900">XRP/USDC</option>
                   <option value="BNB/USDC" className="bg-gray-900">BNB/USDC</option>
                   <option value="SOL/USDC" className="bg-gray-900">SOL/USDC</option>

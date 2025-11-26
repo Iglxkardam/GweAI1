@@ -10,6 +10,7 @@ import { VERIFIED_TOKENS } from '../../config/contracts';
 import { useSwapTransactions } from './hooks/useSwapTransactions';
 import { formatUnits } from 'viem';
 import { SUPPORTED_TOKENS } from '../deposit/hooks/useAgwWallet';
+import { showErrorToast } from '../../utils/toastHelper';
 
 interface Token {
   symbol: string;
@@ -17,6 +18,7 @@ interface Token {
   logo: string;
   balance: string;
   coinGeckoId: string;
+  disabled?: boolean;
 }
 
 export const SwapPage: React.FC = () => {
@@ -110,10 +112,11 @@ export const SwapPage: React.FC = () => {
     },
     { 
       symbol: TOKENS.ETH.symbol, 
-      name: TOKENS.ETH.name, 
+      name: TOKENS.ETH.name + ' (Disabled)', 
       logo: TOKENS.ETH.logo, 
       balance: connected ? parseFloat(ethBalance).toFixed(8) : '0.00000000', 
-      coinGeckoId: TOKENS.ETH.coinGeckoId 
+      coinGeckoId: TOKENS.ETH.coinGeckoId,
+      disabled: true
     },
     { 
       symbol: TOKENS.SOL.symbol, 
@@ -254,18 +257,24 @@ export const SwapPage: React.FC = () => {
    * Handle swap execution
    */
   const handleSwap = async () => {
+    // Block ETH swaps - check this FIRST before any other validation
+    if (fromToken.symbol === 'ETH' || toToken.symbol === 'ETH') {
+      showErrorToast(new Error('ETH trading is currently disabled'));
+      return;
+    }
+
     if (!connected) {
-      alert('Please connect your wallet first');
+      showErrorToast(new Error('Please connect your wallet first'));
       return;
     }
 
     if (!fromAmount || parseFloat(fromAmount) <= 0) {
-      alert('Please enter a valid amount');
+      showErrorToast(new Error('Please enter a valid amount'));
       return;
     }
 
     if (parseFloat(fromAmount) > parseFloat(fromToken.balance)) {
-      alert('Insufficient balance');
+      showErrorToast(new Error('Insufficient balance'));
       return;
     }
 
@@ -274,7 +283,7 @@ export const SwapPage: React.FC = () => {
     const tokenOutAddress = getTokenAddress(toToken.symbol);
 
     if (!tokenInAddress || !tokenOutAddress) {
-      alert('Token not supported for swap');
+      showErrorToast(new Error('Token not supported for swap'));
       return;
     }
 
@@ -288,23 +297,38 @@ export const SwapPage: React.FC = () => {
     console.log('Token In Address:', tokenInAddress);
     console.log('Token Out Address:', tokenOutAddress);
 
-    // Execute swap
-    const txHash = await executeSwap({
-      tokenInAddress,
-      tokenOutAddress,
-      amountIn: fromAmount,
-      tokenInDecimals,
-      tokenOutDecimals,
-      slippageBps: parseInt((parseFloat(slippage) * 100).toString()), // Convert % to bps
-    });
+    try {
+      // Execute swap
+      const txHash = await executeSwap({
+        tokenInAddress,
+        tokenOutAddress,
+        amountIn: fromAmount,
+        tokenInDecimals,
+        tokenOutDecimals,
+        slippageBps: parseInt((parseFloat(slippage) * 100).toString()), // Convert % to bps
+      });
 
-    if (txHash) {
-      console.log('✅ Swap successful:', txHash);
-      // Reset form
-      setFromAmount('');
-      setToAmount('');
+      if (txHash) {
+        console.log('✅ Swap successful:', txHash);
+        // Reset form
+        setFromAmount('');
+        setToAmount('');
+        
+        // Refresh balances (handled automatically by useAgwWallet)
+      }
+    } catch (error: any) {
+      console.error('Swap error:', error);
       
-      // Refresh balances (handled automatically by useAgwWallet)
+      // Handle different error types with user-friendly messages
+      if (error.message?.includes('user rejected') || error.message?.includes('User rejected')) {
+        showErrorToast(new Error('Transaction cancelled'));
+      } else if (error.message?.includes('insufficient funds')) {
+        showErrorToast(new Error('Insufficient funds for transaction'));
+      } else if (error.message?.includes('network')) {
+        showErrorToast(new Error('Network error. Please try again'));
+      } else {
+        showErrorToast(new Error('Swap failed. Please try again'));
+      }
     }
   };
 
