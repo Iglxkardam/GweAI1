@@ -1,5 +1,5 @@
 // OpenRouter API configuration
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODEL = 'x-ai/grok-4.1-fast:free';
 const SITE_URL = 'https://gweai.com'; // Your site URL

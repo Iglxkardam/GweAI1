@@ -1,0 +1,35 @@
+# Hardhat .env
+.env
+
+# Hardhat files
+cache/
+artifacts/
+typechain-types/
+
+# Testing
+coverage/
+coverage.json
+.coverage_artifacts/
+.coverage_cache/
+.coverage_contracts/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+
+# Gas reports
+gas-report.txt
