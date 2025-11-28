@@ -78,9 +78,10 @@ export const useSwapContract = () => {
     const client = createPublicClient({
       chain: baseSepolia,
       transport: fallback([
-        http('https://base-sepolia.g.alchemy.com/v2/demo', { timeout: 10000, retryCount: 2 }),
-        http('https://base-sepolia.blockpi.network/v1/rpc/public', { timeout: 10000, retryCount: 2 }),
-        http('https://base-sepolia-rpc.publicnode.com', { timeout: 10000, retryCount: 2 }),
+        http('https://base-sepolia.g.alchemy.com/v2/demo', { timeout: 10000, retryCount: 3, retryDelay: 150 }),
+        http('https://base-sepolia.blockpi.network/v1/rpc/public', { timeout: 10000, retryCount: 3, retryDelay: 150 }),
+        http('https://base-sepolia-rpc.publicnode.com', { timeout: 10000, retryCount: 3, retryDelay: 150 }),
+        http('https://sepolia.base.org', { timeout: 10000, retryCount: 3, retryDelay: 150 }),
       ]),
     });
     

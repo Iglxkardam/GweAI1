@@ -1,5 +1,11 @@
 // OpenRouter API configuration
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+
+if (!OPENROUTER_API_KEY) {
+  console.error('❌ VITE_OPENAI_API_KEY is not defined in environment variables');
+} else {
+  console.log('✅ OpenRouter API key loaded:', OPENROUTER_API_KEY.substring(0, 20) + '...');
+}
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODEL = 'x-ai/grok-4.1-fast:free';
 const SITE_URL = 'https://gweai.com'; // Your site URL
