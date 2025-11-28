@@ -44,12 +44,12 @@ export const Navbar: React.FC = () => {
             <div className="relative">
               <img 
                 src="/igl-sipfi-logo.svg" 
-                alt="SipLedger" 
+                alt="GweAI" 
                 className="h-10 w-10 md:h-12 md:w-12 group-hover:scale-105 transition-transform"
               />
             </div>
             <span className="text-white font-bold text-lg md:text-xl hidden sm:block">
-              SipLedger
+              GweAI
             </span>
           </motion.a>
 
@@ -65,16 +65,17 @@ export const Navbar: React.FC = () => {
               </a>
             ))}
             
-            <motion.a
-              href="https://www.linkedin.com/in/iglxkardam/"
-              target="_blank"
-              rel="noopener noreferrer"
+            <motion.button
+              onClick={() => {
+                localStorage.setItem('currentPage', 'dca');
+                window.location.reload();
+              }}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               className="ml-4 px-5 py-2.5 bg-white text-black text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all"
             >
               Launch App
-            </motion.a>
+            </motion.button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -113,15 +114,16 @@ export const Navbar: React.FC = () => {
                   {link.name}
                 </a>
               ))}
-              <a
-                href="https://www.linkedin.com/in/iglxkardam/"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="mt-2 px-4 py-3 bg-white text-black font-semibold rounded-lg text-center"
+              <button
+                onClick={() => {
+                  localStorage.setItem('currentPage', 'dca');
+                  window.location.reload();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="mt-2 px-4 py-3 bg-white text-black font-semibold rounded-lg text-center w-full"
               >
                 Launch App
-              </a>
+              </button>
             </div>
           </motion.div>
         )}

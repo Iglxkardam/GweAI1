@@ -13,13 +13,13 @@ export const Footer: React.FC = () => {
             <div className="flex items-center gap-3 mb-4">
               <img 
                 src="/igl-sipfi-logo.svg" 
-                alt="SipLedger" 
+                alt="GweAI" 
                 className="h-10 w-10"
               />
-              <h3 className="text-xl font-bold text-white">SipLedger</h3>
+              <h3 className="text-xl font-bold text-white">GweAI</h3>
             </div>
             <p className="text-white/50 mb-6 text-sm leading-relaxed">
-              AI-powered automated investing for the next generation of crypto traders.
+              AI-powered crypto trading and investment platform for smart traders.
             </p>
             <div className="flex gap-3">
               <a 
@@ -143,7 +143,7 @@ export const Footer: React.FC = () => {
             </div>
           </div>
           <div className="text-center mt-6 text-xs text-white/40">
-            © {currentYear} SipLedger. All rights reserved. Not financial advice.
+            © {currentYear} GweAI. All rights reserved. Not financial advice.
           </div>
         </div>
       </div>

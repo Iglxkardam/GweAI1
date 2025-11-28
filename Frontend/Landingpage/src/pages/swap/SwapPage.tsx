@@ -54,8 +54,8 @@ export const SwapPage: React.FC = () => {
       'XRP': VERIFIED_TOKENS.XRP,
       'TON': VERIFIED_TOKENS.TON,
       'AVAX': VERIFIED_TOKENS.AVAX,
-      'TRX': VERIFIED_TOKENS.TRON,
-      'ADA': VERIFIED_TOKENS.CARDANO,
+      'TRX': VERIFIED_TOKENS.TRX,
+      'ADA': VERIFIED_TOKENS.ADA,
       'DOGE': VERIFIED_TOKENS.DOGE,
     };
     return addressMap[symbol] || '';

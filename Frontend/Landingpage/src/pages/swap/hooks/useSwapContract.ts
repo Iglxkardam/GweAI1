@@ -72,12 +72,16 @@ export const useSwapContract = () => {
   const getPublicClient = useCallback(async () => {
     if (publicClientRef.current) return publicClientRef.current;
     
-    const { createPublicClient, http } = await import('viem');
+    const { createPublicClient, http, fallback } = await import('viem');
     const { baseSepolia } = await import('viem/chains');
     
     const client = createPublicClient({
       chain: baseSepolia,
-      transport: http('https://sepolia.base.org'),
+      transport: fallback([
+        http('https://base-sepolia.g.alchemy.com/v2/demo', { timeout: 10000, retryCount: 2 }),
+        http('https://base-sepolia.blockpi.network/v1/rpc/public', { timeout: 10000, retryCount: 2 }),
+        http('https://base-sepolia-rpc.publicnode.com', { timeout: 10000, retryCount: 2 }),
+      ]),
     });
     
     publicClientRef.current = client;

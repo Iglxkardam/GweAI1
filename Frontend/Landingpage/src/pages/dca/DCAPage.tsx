@@ -3,26 +3,38 @@ import { FaPaperPlane, FaUser } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { ChatHistorySidebar, MarkdownMessage, StarfieldBackground } from '../../components';
 import { TypingText } from '../../components/TypingText';
-import { generateAIResponse, parseDCARequest, type ChatMessage } from './services/groqService';
-import { DCAInlineCard, type DCAParameters } from './components';
+import { generateAIResponse, parseDCARequest, parseTradeRequest, type ChatMessage } from './services/groqService';
+import { DCAInlineCard, type DCAParameters, TradeConfirmationCard, type TradeParams } from './components';
 import { 
   createNewConversation, 
   getConversation, 
   addMessageToConversation,
+  updateMessageInConversation,
   getCurrentChatId,
   setCurrentChatId,
   clearCurrentChatId,
   generateChatId
 } from '../../utils/chatStorage';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
-
-interface Message {
+import { useSwapContract } from '../swap/hooks/useSwapContract';
+import { VERIFIED_TOKENS } from '../../config/contracts';
+import { TOKENS } from '../../config/tokens';
+import {
+  getUserPortfolio, 
+  formatPortfolioForAI, 
+  isPortfolioQuery, 
+  extractTokenQuery,
+  formatTokenBalance
+} from './services/portfolioService';
+import { routeQuery, debugRoute } from './services/queryRouter';interface Message {
   id: string;
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  type?: 'text' | 'dca-card';
+  type?: 'text' | 'dca-card' | 'trade-card';
   dcaParams?: DCAParameters;
+  tradeParams?: TradeParams;
+  executed?: boolean; // Track if order has been executed
 }
 
 interface DCAPageProps {
@@ -30,7 +42,22 @@ interface DCAPageProps {
 }
 
 export const DCAPage: React.FC<DCAPageProps> = ({ onSidebarToggle }) => {
-  const { connected: isConnected, address } = useAgwWallet();
+  const { 
+    connected: isConnected, 
+    address,
+    btcBalance,
+    ethBalance,
+    solBalance,
+    usdcBalance,
+    bnbBalance,
+    cardanoBalance,
+    dogeBalance,
+    tonBalance,
+    avaxBalance,
+    tronBalance,
+    xrpBalance
+  } = useAgwWallet();
+  const { executeSwap } = useSwapContract();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -39,6 +66,7 @@ export const DCAPage: React.FC<DCAPageProps> = ({ onSidebarToggle }) => {
   const [currentChatId, setCurrentChatIdState] = useState<string | null>(null);
   const [latestMessageId, setLatestMessageId] = useState<string | null>(null); // Track newest message for typing effect
   const [isLoadingChat, setIsLoadingChat] = useState(false); // Loading state for chat switching
+  const [lastMentionedToken, setLastMentionedToken] = useState<string | null>(null); // Track last token for context
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Clear data when wallet changes or disconnects
@@ -196,6 +224,202 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
     }
   };
 
+  // Handle Trade approval - Execute actual blockchain transaction
+  const handleApproveTrade = async (params: TradeParams, messageId: string) => {
+    // Check if already executed
+    const message = messages.find(msg => msg.id === messageId);
+    if (message?.executed) {
+      return; // Already executed, prevent duplicate
+    }
+
+    if (!isConnected || !address) {
+      const errorMessage: Message = {
+        id: generateChatId(),
+        text: '❌ Please connect your wallet first to execute trades.',
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
+    // Show processing message
+    const processingMessage: Message = {
+      id: generateChatId(),
+      text: '⏳ **Processing Transaction...**\n\nPlease confirm the transaction in your wallet.',
+      sender: 'ai',
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, processingMessage]);
+    
+    try {
+      let txHash: string | null = null;
+      let tokenInAddress: string = '';
+      let tokenOutAddress: string = '';
+      let amountIn: string = '';
+      let tokenInSymbol: string = '';
+      let tokenOutSymbol: string = '';
+
+      switch (params.type) {
+        case 'buy': {
+          // Buy = USDC -> Token
+          tokenInSymbol = 'USDC';
+          tokenOutSymbol = params.token;
+          tokenInAddress = VERIFIED_TOKENS.USDC;
+          tokenOutAddress = VERIFIED_TOKENS[params.token as keyof typeof VERIFIED_TOKENS];
+          amountIn = params.amount.toString();
+
+          const tokenInData = TOKENS[tokenInSymbol];
+          const tokenOutData = TOKENS[tokenOutSymbol];
+
+          if (!tokenInData || !tokenOutData || !tokenOutAddress) {
+            throw new Error(`Invalid token: ${params.token}`);
+          }
+
+          txHash = await executeSwap({
+            tokenInAddress,
+            tokenOutAddress,
+            amountIn,
+            tokenInDecimals: tokenInData.decimals,
+            tokenOutDecimals: tokenOutData.decimals,
+            slippageBps: (params.slippage || 0.5) * 100, // Convert % to bps
+          });
+          break;
+        }
+
+        case 'sell': {
+          // Sell = Token -> USDC
+          tokenInSymbol = params.token;
+          tokenOutSymbol = 'USDC';
+          tokenInAddress = VERIFIED_TOKENS[params.token as keyof typeof VERIFIED_TOKENS];
+          tokenOutAddress = VERIFIED_TOKENS.USDC;
+          
+          // Amount is now always a number (MAX converted earlier)
+          amountIn = params.amount.toString();
+
+          const tokenInData = TOKENS[tokenInSymbol];
+          const tokenOutData = TOKENS[tokenOutSymbol];
+
+          if (!tokenInData || !tokenOutData || !tokenInAddress) {
+            throw new Error(`Invalid token: ${params.token}`);
+          }
+
+          txHash = await executeSwap({
+            tokenInAddress,
+            tokenOutAddress,
+            amountIn,
+            tokenInDecimals: tokenInData.decimals,
+            tokenOutDecimals: tokenOutData.decimals,
+            slippageBps: (params.slippage || 0.5) * 100,
+          });
+          break;
+        }
+
+        case 'swap': {
+          // Swap = Token A -> Token B
+          tokenInSymbol = params.fromToken;
+          tokenOutSymbol = params.toToken;
+          tokenInAddress = VERIFIED_TOKENS[params.fromToken as keyof typeof VERIFIED_TOKENS];
+          tokenOutAddress = VERIFIED_TOKENS[params.toToken as keyof typeof VERIFIED_TOKENS];
+          
+          // Amount is now always a number (MAX converted earlier)
+          amountIn = params.amount.toString();
+
+          const tokenInData = TOKENS[tokenInSymbol];
+          const tokenOutData = TOKENS[tokenOutSymbol];
+
+          if (!tokenInData || !tokenOutData || !tokenInAddress || !tokenOutAddress) {
+            throw new Error(`Invalid token pair: ${params.fromToken} -> ${params.toToken}`);
+          }
+
+          txHash = await executeSwap({
+            tokenInAddress,
+            tokenOutAddress,
+            amountIn,
+            tokenInDecimals: tokenInData.decimals,
+            tokenOutDecimals: tokenOutData.decimals,
+            slippageBps: (params.slippage || 0.5) * 100,
+          });
+          break;
+        }
+
+        case 'vault':
+        case 'stake': {
+          // TODO: Implement vault staking contract integration
+          throw new Error('Vault/Staking feature coming soon! 🚧');
+        }
+
+        default:
+          throw new Error('Unknown trade type');
+      }
+
+      // Transaction successful
+      if (txHash) {
+        // Mark the trade card as executed FIRST (synchronous update)
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId ? { ...msg, executed: true } : msg
+        ));
+
+        // Also update in localStorage so it persists across sessions
+        if (currentChatId) {
+          updateMessageInConversation(currentChatId, messageId, { executed: true }, address || undefined);
+        }
+
+        // Small delay to ensure UI updates before adding success message
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const successMessage: Message = {
+          id: generateChatId(),
+          text: `✅ **Transaction Successful!**\n\n**Type:** ${params.type.toUpperCase()}\n**Tx Hash:** \`${txHash.slice(0, 10)}...${txHash.slice(-8)}\`\n\n[View on Explorer](https://sepolia.basescan.org/tx/${txHash})\n\n🎉 Your transaction has been confirmed on the blockchain!`,
+          sender: 'ai',
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, successMessage]);
+        
+        if (currentChatId) {
+          addMessageToConversation(currentChatId, successMessage, address || undefined);
+        }
+      } else {
+        throw new Error('Transaction failed - no hash returned');
+      }
+
+    } catch (err: any) {
+      console.error('Trade execution error:', err);
+      
+      const errorMessage: Message = {
+        id: generateChatId(),
+        text: `❌ **Transaction Failed**\n\n${err.message || 'Unknown error occurred'}\n\nPlease try again or contact support if the issue persists.`,
+        sender: 'ai',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+      
+      if (currentChatId) {
+        addMessageToConversation(currentChatId, errorMessage, address || undefined);
+      }
+    }
+  };
+
+  // Handle Trade card cancellation
+  const handleCancelTrade = (messageId: string) => {
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    
+    const cancellationMessage: Message = {
+      id: generateChatId(),
+      text: 'Trade cancelled. Feel free to create a new order or ask me anything else!',
+      sender: 'ai',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, cancellationMessage]);
+    
+    if (currentChatId) {
+      addMessageToConversation(currentChatId, cancellationMessage, address || undefined);
+    }
+  };
+
   // Auto-scroll to bottom when messages change - with delay for animation
   const scrollToBottom = () => {
     // Delay scroll slightly to let fade-in animation start
@@ -243,6 +467,154 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
 
     // Save user message to storage
     addMessageToConversation(chatId, userMessage, address || undefined);
+
+    // 🔍 SMART ROUTING: Detect query type before processing
+    debugRoute(userInput);
+    const route = routeQuery(userInput);
+
+    // Check for trade commands FIRST (buy/sell/swap override portfolio detection)
+    const hasTradeKeyword = /(buy|sell|swap|trade|purchase|convert|exchange)\s/i.test(userInput);
+    
+    // Check if this is a portfolio/balance query (READ-ONLY, no AI call needed)
+    // BUT: Skip if user is trying to buy/sell/swap (e.g., "buy btc with all usdc in my wallet")
+    if (!hasTradeKeyword && (route.type === 'portfolio' || isPortfolioQuery(userInput))) {
+      if (!isConnected || !address) {
+        const walletMessage: Message = {
+          id: generateChatId(),
+          text: '🔒 Please connect your wallet first to view your portfolio.',
+          sender: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, walletMessage]);
+        setIsTyping(false);
+        return;
+      }
+
+      try {
+        // Fetch portfolio data (READ-ONLY - no private keys accessed)
+        const portfolio = await getUserPortfolio(address);
+        const specificToken = extractTokenQuery(userInput);
+        
+        // Track the mentioned token for context-aware commands
+        if (specificToken) {
+          setLastMentionedToken(specificToken);
+          console.log(`🎯 Tracking token context: ${specificToken}`);
+        }
+        
+        let responseText: string;
+        if (specificToken) {
+          responseText = formatTokenBalance(portfolio, specificToken);
+        } else {
+          responseText = formatPortfolioForAI(portfolio);
+        }
+
+        setTimeout(() => {
+          const portfolioMessage: Message = {
+            id: generateChatId(),
+            text: responseText,
+            sender: 'ai',
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, portfolioMessage]);
+          addMessageToConversation(chatId, portfolioMessage, address || undefined);
+          setIsTyping(false);
+        }, 1500);
+        
+        return;
+      } catch (error) {
+        console.error('Portfolio fetch error:', error);
+        const errorMessage: Message = {
+          id: generateChatId(),
+          text: '❌ Unable to fetch portfolio data. Please try again.',
+          sender: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        setIsTyping(false);
+        return;
+      }
+    }
+
+    // Check if this is a Trade request (buy/sell/swap/vault) - AFTER portfolio check
+    // Using AI parsing for better accuracy with conversation context
+    try {
+      const tradeRequest = await parseTradeRequest(userInput, lastMentionedToken || undefined);
+      if (tradeRequest) {
+        // If amount is MAX, convert to actual balance before creating card
+        if (typeof tradeRequest.amount === 'string' && tradeRequest.amount === 'MAX') {
+          const balanceMap: { [key: string]: string } = {
+            'BTC': btcBalance || '0',
+            'ETH': ethBalance || '0',
+            'SOL': solBalance || '0',
+            'USDC': usdcBalance || '0',
+            'BNB': bnbBalance || '0',
+            'ADA': cardanoBalance || '0',
+            'DOGE': dogeBalance || '0',
+            'TON': tonBalance || '0',
+            'AVAX': avaxBalance || '0',
+            'TRX': tronBalance || '0',
+            'XRP': xrpBalance || '0'
+          };
+          
+          // Get the token to check balance for
+          let tokenToCheck = '';
+          if (tradeRequest.type === 'buy') {
+            // For buy orders with MAX, user wants to spend all USDC
+            tokenToCheck = 'USDC';
+          } else if (tradeRequest.type === 'sell') {
+            tokenToCheck = tradeRequest.token;
+          } else if (tradeRequest.type === 'swap') {
+            tokenToCheck = tradeRequest.fromToken;
+          }
+          
+          if (tokenToCheck && balanceMap[tokenToCheck]) {
+            const actualBalance = parseFloat(balanceMap[tokenToCheck]);
+            if (actualBalance > 0) {
+              // Convert MAX to actual balance number
+              (tradeRequest as any).amount = actualBalance;
+              // For buy orders, amount is USD (not token amount)
+              if (tradeRequest.type === 'buy') {
+                (tradeRequest as any).isTokenAmount = false;
+              } else {
+                (tradeRequest as any).isTokenAmount = true;
+              }
+            } else {
+              // Insufficient balance
+              const errorMsg: Message = {
+                id: generateChatId(),
+                text: `❌ You don't have any ${tokenToCheck} to ${tradeRequest.type}.`,
+                sender: 'ai',
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, errorMsg]);
+              setIsTyping(false);
+              return;
+            }
+          }
+        }
+        
+        setTimeout(() => {
+          const tradeCardMessage: Message = {
+            id: generateChatId(),
+            text: `I've created a ${tradeRequest.type} order based on your request. Please review and confirm:`,
+            sender: 'ai',
+            timestamp: new Date(),
+            type: 'trade-card',
+            tradeParams: tradeRequest as TradeParams
+          };
+          
+          setMessages(prev => [...prev, tradeCardMessage]);
+          addMessageToConversation(chatId, tradeCardMessage, address || undefined);
+          setIsTyping(false);
+        }, 1500);
+        
+        return;
+      }
+    } catch (error) {
+      console.error('Trade parsing error:', error);
+      // Continue to other parsers if trade parsing fails
+    }
 
     // Check if this is a DCA request
     const dcaRequest = parseDCARequest(userInput);
@@ -798,8 +1170,22 @@ Your plan will start on the next scheduled date. You can modify or cancel it any
                     
                     {/* AI Message Content */}
                     <div className="flex-1">
-                      {/* Check if this is a DCA card message */}
-                      {message.type === 'dca-card' && message.dcaParams ? (
+                      {/* Check if this is a Trade card message */}
+                      {message.type === 'trade-card' && message.tradeParams ? (
+                        <div className="space-y-3">
+                          {/* Intro text */}
+                          <div className="px-3 py-2 sm:px-4 sm:py-3 rounded-2xl bg-transparent text-white">
+                            <p className="text-xs sm:text-sm text-gray-300">{message.text}</p>
+                          </div>
+                          {/* Trade Card */}
+                          <TradeConfirmationCard
+                            parameters={message.tradeParams}
+                            onApprove={(params) => handleApproveTrade(params, message.id)}
+                            onCancel={() => handleCancelTrade(message.id)}
+                            isExecuted={message.executed || false}
+                          />
+                        </div>
+                      ) : message.type === 'dca-card' && message.dcaParams ? (
                         <div className="space-y-3">
                           {/* Intro text */}
                           <div className="px-3 py-2 sm:px-4 sm:py-3 rounded-2xl bg-transparent text-white">

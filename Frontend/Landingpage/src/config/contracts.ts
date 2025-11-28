@@ -43,8 +43,8 @@ export const VERIFIED_TOKENS = {
   XRP: '0x01E278B5421AAC93A206C15b2933419DA19E17b3',
   TON: '0xC85D84a1092b81aCBA9bC75fad6063a7DA642E36',
   AVAX: '0x5DC449E37b6DAAD182d4Fb13C8dFE53C383C2E46',
-  TRON: '0x45442ecB66A1a10c0F9817fb7F2B50a3bB99bd69',
-  CARDANO: '0xcB1A4c81E7a56cbE2246DA3aE256Ba0154940648',
+  TRX: '0x45442ecB66A1a10c0F9817fb7F2B50a3bB99bd69',
+  ADA: '0xcB1A4c81E7a56cbE2246DA3aE256Ba0154940648',
   DOGE: '0x803aD69f487536Ec1eE8a83Cd329e3d1703f8337',
 } as const;
 
@@ -54,7 +54,7 @@ export const VERIFIED_TOKENS = {
 export const NETWORK_CONFIG = {
   chainId: 84532, // Base Sepolia
   name: 'Base Sepolia',
-  rpcUrl: 'https://sepolia.base.org',
+  rpcUrl: 'https://base-sepolia.g.alchemy.com/v2/demo', // Using Alchemy for better rate limits
   blockExplorer: 'https://sepolia.basescan.org',
 } as const;
 

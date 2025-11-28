@@ -108,13 +108,27 @@ export const useTradingContract = () => {
       
       if (!walletClient) throw new Error('Wallet client not available');
       
-      // Create public client for reading blockchain state
-      const { createPublicClient, http, erc20Abi } = await import('viem');
+      // Create public client for reading blockchain state with fallback RPCs
+      const { createPublicClient, http, fallback, erc20Abi } = await import('viem');
       const { baseSepolia } = await import('viem/chains');
+      
+      // Multiple RPC endpoints for Base Sepolia - automatic fallback on rate limits
+      const BASE_SEPOLIA_RPCS = [
+        'https://base-sepolia.g.alchemy.com/v2/demo',
+        'https://base-sepolia.blockpi.network/v1/rpc/public',
+        'https://base-sepolia-rpc.publicnode.com',
+        'https://sepolia.base.org', // Official but rate limited, use as last resort
+      ];
       
       const publicClient = createPublicClient({
         chain: baseSepolia,
-        transport: http('https://sepolia.base.org'),
+        transport: fallback(
+          BASE_SEPOLIA_RPCS.map(url => http(url, {
+            timeout: 10000,
+            retryCount: 3,
+            retryDelay: 150,
+          }))
+        ),
       });
 
       // Step 1: Check current allowance
@@ -258,13 +272,27 @@ export const useTradingContract = () => {
       console.log('✅ Token approval sent:', approveTx);
       console.log('⏳ Waiting for approval confirmation...');
 
-      // Wait for approval to be mined
-      const { createPublicClient, http } = await import('viem');
+      // Wait for approval to be mined with fallback RPCs
+      const { createPublicClient, http, fallback } = await import('viem');
       const { baseSepolia } = await import('viem/chains');
+      
+      // Multiple RPC endpoints for Base Sepolia - automatic fallback on rate limits
+      const BASE_SEPOLIA_RPCS = [
+        'https://base-sepolia.g.alchemy.com/v2/demo',
+        'https://base-sepolia.blockpi.network/v1/rpc/public',
+        'https://base-sepolia-rpc.publicnode.com',
+        'https://sepolia.base.org', // Official but rate limited, use as last resort
+      ];
       
       const publicClient = createPublicClient({
         chain: baseSepolia,
-        transport: http('https://sepolia.base.org'),
+        transport: fallback(
+          BASE_SEPOLIA_RPCS.map(url => http(url, {
+            timeout: 10000,
+            retryCount: 3,
+            retryDelay: 150,
+          }))
+        ),
       });
 
       await publicClient.waitForTransactionReceipt({ 

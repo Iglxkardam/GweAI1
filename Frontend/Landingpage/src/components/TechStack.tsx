@@ -5,23 +5,23 @@ import { AnimatedSection } from './AnimatedSection';
 export const TechStack: React.FC = () => {
   const technologies = [
     {
-      name: 'Abstract',
-      description: 'Account abstraction for seamless UX',
+      name: 'Base Sepolia',
+      description: 'L2 blockchain for fast transactions',
+      gradient: 'from-blue-500 to-blue-600',
+    },
+    {
+      name: 'Groq AI',
+      description: 'Fast AI inference for trading signals',
+      gradient: 'from-purple-500 to-purple-600',
+    },
+    {
+      name: 'Dynamic',
+      description: 'Smart wallet integration',
       gradient: 'from-green-500 to-emerald-600',
     },
     {
-      name: 'Galadriel',
-      description: 'Decentralized on-chain AI',
-      gradient: 'from-blue-500 to-purple-600',
-    },
-    {
-      name: 'Chainlink',
-      description: 'Automated execution oracles',
-      gradient: 'from-blue-600 to-indigo-600',
-    },
-    {
-      name: 'Uniswap',
-      description: 'Decentralized liquidity',
+      name: 'Viem',
+      description: 'Type-safe blockchain interactions',
       gradient: 'from-pink-500 to-rose-600',
     },
   ];

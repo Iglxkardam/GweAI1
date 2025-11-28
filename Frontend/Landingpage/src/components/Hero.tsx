@@ -88,8 +88,8 @@ export const Hero: React.FC<HeroProps> = memo(({ onStartInvesting }) => {
             </h1>
             
             <p className="text-lg md:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed font-light">
-              AI-powered dollar-cost averaging that removes emotion from crypto investing. 
-              Set your strategy once, let smart contracts do the rest.
+              Advanced AI analytics meets automated crypto trading. 
+              Smart strategies, real-time insights, and seamless execution - all in one platform.
             </p>
 
             {/* Key benefits list */}
@@ -149,10 +149,10 @@ export const Hero: React.FC<HeroProps> = memo(({ onStartInvesting }) => {
             className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-20 max-w-5xl mx-auto"
           >
             {[
-              { value: '$2.5M+', label: 'Trading Volume' },
-              { value: '500+', label: 'Active Users' },
-              { value: '12.4%', label: 'Avg. Annual Return' },
-              { value: '24/7', label: 'AI Monitoring' },
+              { value: '10+', label: 'Crypto Assets' },
+              { value: 'Beta', label: 'Live on Testnet' },
+              { value: '24/7', label: 'AI Analytics' },
+              { value: 'Open', label: 'Source Code' },
             ].map((stat, index) => (
               <div key={index} className="text-center group">
                 <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">

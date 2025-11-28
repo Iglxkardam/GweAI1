@@ -37,7 +37,7 @@ export const Comparison: React.FC = () => {
         <div className="text-center mb-20">
           <span className="text-sm text-white/50 uppercase tracking-wider mb-4 block">Comparison</span>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Why Choose <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">IGL SIPfi</span>
+            Why Choose <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">GweAI</span>
           </h2>
         </div>
       </AnimatedSection>
@@ -49,7 +49,7 @@ export const Comparison: React.FC = () => {
             <div className="grid grid-cols-3 gap-4 p-6 bg-white/5 border-b border-white/10">
               <div className="text-white/80 font-semibold text-sm">Feature</div>
               <div className="text-center text-white/60 font-medium text-sm">Traditional</div>
-              <div className="text-center text-blue-400 font-semibold text-sm">IGL SIPfi</div>
+              <div className="text-center text-blue-400 font-semibold text-sm">GweAI</div>
             </div>
 
             {/* Rows */}

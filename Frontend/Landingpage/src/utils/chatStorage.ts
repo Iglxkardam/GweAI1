@@ -10,6 +10,10 @@ export interface ChatMessage {
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
+  type?: 'text' | 'dca-card' | 'trade-card';
+  dcaParams?: any;
+  tradeParams?: any;
+  executed?: boolean; // Track if order has been executed
 }
 
 export interface ChatConversation {
@@ -178,6 +182,31 @@ export function addMessageToConversation(
   }
   
   saveConversation(conversation, walletAddress);
+}
+
+/**
+ * Update a specific message in a conversation (e.g., marking as executed)
+ */
+export function updateMessageInConversation(
+  chatId: string,
+  messageId: string,
+  updates: Partial<ChatMessage>,
+  walletAddress: string | undefined
+): void {
+  const conversation = getConversation(chatId, walletAddress);
+  
+  if (!conversation) return;
+
+  // Find and update the message
+  const messageIndex = conversation.messages.findIndex(msg => msg.id === messageId);
+  if (messageIndex >= 0) {
+    conversation.messages[messageIndex] = {
+      ...conversation.messages[messageIndex],
+      ...updates
+    };
+    conversation.updatedAt = new Date();
+    saveConversation(conversation, walletAddress);
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 ﻿import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { FaWallet, FaChartLine, FaArrowUp, FaCog } from 'react-icons/fa';
+import { FaWallet, FaChartLine, FaArrowUp } from 'react-icons/fa';
 import { StarfieldBackground, PerformanceChart } from '../../components';
 import { useAgwWallet } from '../deposit/hooks/useAgwWallet';
 import { useGlobalPrices } from '../../context/PriceContext';
@@ -82,7 +82,7 @@ export const PortfolioPage: React.FC = () => {
             </h1>
           </div>
           <p className="text-gray-400 text-sm sm:text-base md:text-lg px-4">
-            Track your DCA investments and performance
+            Track your crypto investments and performance
           </p>
         </motion.div>
 
@@ -111,26 +111,14 @@ export const PortfolioPage: React.FC = () => {
 
           <div className="bg-white/[0.03] backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/[0.08] hover:border-white/[0.12] transition-all">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg sm:rounded-xl flex items-center justify-center border border-blue-500/20">
-                <FaChartLine className="text-blue-400 text-base sm:text-lg" />
-              </div>
-              <span className="text-blue-300 text-xs sm:text-sm font-medium bg-blue-500/20 px-2 py-1 rounded-lg border border-blue-500/30">Monthly</span>
-            </div>
-            <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">DCA Amount</h3>
-            <p className="text-2xl sm:text-3xl font-bold text-white">$500</p>
-            <p className="text-xs sm:text-sm text-gray-400">Next investment in 12 days</p>
-          </div>
-
-          <div className="bg-white/[0.03] backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/[0.08] hover:border-white/[0.12] transition-all">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg sm:rounded-xl flex items-center justify-center border border-purple-500/20">
-                <span className="text-purple-400 font-bold text-base sm:text-lg">+</span>
+                <FaChartLine className="text-purple-400 text-base sm:text-lg" />
               </div>
-              <FaCog className="text-purple-400 text-lg sm:text-xl" />
+              <span className="text-purple-300 text-xs sm:text-sm font-medium bg-purple-500/20 px-2 py-1 rounded-lg border border-purple-500/30">Live</span>
             </div>
-            <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Active Plans</h3>
-            <p className="text-2xl sm:text-3xl font-bold text-white">3</p>
-            <p className="text-xs sm:text-sm text-gray-400">BTC, ETH, SOL strategies</p>
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Total Holdings</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-white">{connected ? tokenHoldings.length : '0'}</p>
+            <p className="text-xs sm:text-sm text-gray-400">{connected ? 'Active tokens' : 'Connect to view'}</p>
           </div>
         </motion.div>
 

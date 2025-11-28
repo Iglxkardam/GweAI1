@@ -5,30 +5,30 @@ import { FaQuoteLeft } from 'react-icons/fa';
 
 export const SocialProof: React.FC = () => {
   const stats = [
-    { value: '2.5M+', label: 'Trading Volume' },
-    { value: '500+', label: 'Active Users' },
-    { value: '12%', label: 'Avg. Returns' },
-    { value: '99.9%', label: 'Uptime' },
+    { value: '10+', label: 'Supported Tokens' },
+    { value: 'Beta', label: 'Testing Phase' },
+    { value: 'AI', label: 'Powered Trading' },
+    { value: 'Web3', label: 'Non-Custodial' },
   ];
 
   const testimonials = [
     {
-      name: 'Rahul M.',
-      role: 'Early Adopter',
-      content: 'Finally, a DCA platform that just works. No wallet hassle, clean interface, and AI actually helps.',
-      avatar: 'R',
+      name: 'Smart Trading',
+      role: 'AI-Powered',
+      content: 'Advanced AI analytics help you make informed trading decisions with real-time market insights.',
+      avatar: '🤖',
     },
     {
-      name: 'Priya S.',
-      role: 'Crypto Investor',
-      content: 'The forced HODL feature saved me during the last dip. Best decision I made was enabling vault lock.',
-      avatar: 'P',
+      name: 'Secure & Safe',
+      role: 'Non-Custodial',
+      content: 'Your keys, your crypto. All transactions are on-chain and verifiable on Base Sepolia testnet.',
+      avatar: '🔐',
     },
     {
-      name: 'Amit K.',
-      role: 'Tech Professional',
-      content: 'Being able to verify every transaction on-chain gives me confidence. True transparency.',
-      avatar: 'A',
+      name: 'Easy to Use',
+      role: 'User-Friendly',
+      content: 'Simple interface with chat-based trading. Connect wallet and start trading in seconds.',
+      avatar: '✨',
     },
   ];
 
@@ -49,9 +49,9 @@ export const SocialProof: React.FC = () => {
       {/* Testimonials */}
       <AnimatedSection direction="fade">
         <div className="text-center mb-16">
-          <span className="text-sm text-white/50 uppercase tracking-wider mb-4 block">Testimonials</span>
+          <span className="text-sm text-white/50 uppercase tracking-wider mb-4 block">Platform Highlights</span>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            What Our <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Users Say</span>
+            Why Choose <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">GweAI</span>
           </h2>
         </div>
       </AnimatedSection>

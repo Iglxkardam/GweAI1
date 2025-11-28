@@ -1,5 +1,5 @@
 // IndexedDB wrapper for better performance and larger storage
-const DB_NAME = 'SipLedgerDB';
+const DB_NAME = 'GweAIDB';
 const DB_VERSION = 1;
 
 interface DBStores {

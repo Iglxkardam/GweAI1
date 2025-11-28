@@ -1,7 +1,7 @@
 // Service Worker for offline support and caching
-const CACHE_NAME = 'sipledger-v1';
-const STATIC_CACHE = 'sipledger-static-v1';
-const DYNAMIC_CACHE = 'sipledger-dynamic-v1';
+const CACHE_NAME = 'gweai-v1';
+const STATIC_CACHE = 'gweai-static-v1';
+const DYNAMIC_CACHE = 'gweai-dynamic-v1';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
@@ -160,6 +160,6 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('SipLedger', options)
+    self.registration.showNotification('GweAI', options)
   );
 });
