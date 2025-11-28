@@ -3,11 +3,11 @@ import { baseSepolia } from 'wagmi/chains';
 import { injected, coinbaseWallet, walletConnect } from 'wagmi/connectors';
 
 // Multiple RPC endpoints for Base Sepolia - automatic fallback on rate limits
+// NOTE: Removed sepolia.base.org due to aggressive rate limiting causing 403 errors
 const BASE_SEPOLIA_RPCS = [
   'https://base-sepolia.g.alchemy.com/v2/demo',
   'https://base-sepolia.blockpi.network/v1/rpc/public',
   'https://base-sepolia-rpc.publicnode.com',
-  'https://sepolia.base.org', // Official but rate limited
 ];
 
 // Wagmi config for Base Sepolia with multiple wallet options

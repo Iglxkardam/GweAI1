@@ -126,7 +126,7 @@ export const useAgwWallet = () => {
     }
     
     try {
-      const rpcUrl = 'https://sepolia.base.org';
+      const rpcUrl = 'https://base-sepolia.g.alchemy.com/v2/demo';
       const timeout = 10000; // 10 second timeout
       
       // Create abort controller for timeout

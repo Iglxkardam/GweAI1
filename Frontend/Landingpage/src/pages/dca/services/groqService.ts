@@ -16,10 +16,9 @@ console.log('🔑 OpenRouter API Key present:', !!OPENROUTER_API_KEY);
 console.log('🔑 API Key length:', OPENROUTER_API_KEY?.length || 0);
 console.log('🔑 First 10 chars:', OPENROUTER_API_KEY?.substring(0, 10));
 
-// Validate API key
+// Warn if API key is missing but don't throw error (let it fail gracefully at API call time)
 if (!OPENROUTER_API_KEY) {
-  console.error('❌ OPENROUTER API KEY is not available');
-  throw new Error('OPENROUTER API KEY is required');
+  console.warn('⚠️ OPENROUTER API KEY is not available - AI chat will not work');
 }
 
 export interface ChatMessage {

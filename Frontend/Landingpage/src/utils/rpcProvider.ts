@@ -10,7 +10,6 @@ const RPC_ENDPOINTS = [
   'https://base-sepolia.g.alchemy.com/v2/demo', // Alchemy has best rate limits
   'https://base-sepolia.blockpi.network/v1/rpc/public',
   'https://base-sepolia-rpc.publicnode.com',
-  'https://sepolia.base.org', // Official but rate limited, use as last resort
 ];
 
 // Cache for frequently accessed data

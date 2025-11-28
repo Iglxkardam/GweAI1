@@ -37,7 +37,11 @@ export const useSwapTransactions = (userAddress: string | undefined, enabled: bo
     try {
       const publicClient = createPublicClient({
         chain: baseSepolia,
-        transport: http('https://sepolia.base.org'),
+        transport: fallback([
+          http('https://base-sepolia.g.alchemy.com/v2/demo', { timeout: 10000 }),
+          http('https://base-sepolia.blockpi.network/v1/rpc/public', { timeout: 10000 }),
+          http('https://base-sepolia-rpc.publicnode.com', { timeout: 10000 }),
+        ]),
       });
 
       // Get current block

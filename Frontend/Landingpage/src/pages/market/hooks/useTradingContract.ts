@@ -117,7 +117,6 @@ export const useTradingContract = () => {
         'https://base-sepolia.g.alchemy.com/v2/demo',
         'https://base-sepolia.blockpi.network/v1/rpc/public',
         'https://base-sepolia-rpc.publicnode.com',
-        'https://sepolia.base.org', // Official but rate limited, use as last resort
       ];
       
       const publicClient = createPublicClient({
@@ -281,7 +280,6 @@ export const useTradingContract = () => {
         'https://base-sepolia.g.alchemy.com/v2/demo',
         'https://base-sepolia.blockpi.network/v1/rpc/public',
         'https://base-sepolia-rpc.publicnode.com',
-        'https://sepolia.base.org', // Official but rate limited, use as last resort
       ];
       
       const publicClient = createPublicClient({
