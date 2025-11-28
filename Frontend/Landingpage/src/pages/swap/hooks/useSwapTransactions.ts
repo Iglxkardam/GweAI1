@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { createPublicClient, http, parseAbiItem } from 'viem';
+import { createPublicClient, http, fallback, parseAbiItem } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { getVerifiedContract } from '../../../config/contracts';
 

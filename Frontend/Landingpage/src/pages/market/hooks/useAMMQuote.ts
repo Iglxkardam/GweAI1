@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { createPublicClient, http, formatUnits, parseUnits } from 'viem';
+import { createPublicClient, http, fallback, formatUnits, parseUnits } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { getVerifiedContract } from '../../../config/contracts';
 
