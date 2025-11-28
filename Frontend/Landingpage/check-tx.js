@@ -1,6 +1,6 @@
 // Check transaction details
 const TX_HASH = "0xb9aefed31d4900e35bc521fea645fadad82acd99049817b27b48e0cb5029b700";
-const RPC_URL = 'https://sepolia.base.org';
+const RPC_URL = 'https://base-sepolia.g.alchemy.com/v2/demo';
 
 async function checkTx() {
   console.log('🔍 Checking transaction:', TX_HASH);

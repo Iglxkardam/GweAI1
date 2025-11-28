@@ -55,7 +55,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               symbol: 'ETH',
             },
             networkId: 84532,
-            rpcUrls: ['https://sepolia.base.org'],
+            rpcUrls: ['https://base-sepolia.g.alchemy.com/v2/demo'],
             vanityName: 'Base Sepolia',
           },
           // BNB Smart Chain Testnet

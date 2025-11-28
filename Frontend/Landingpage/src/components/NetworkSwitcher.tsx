@@ -15,7 +15,7 @@ const NETWORKS = [
   {
     id: 84532,
     name: 'Base Sepolia',
-    rpcUrl: 'https://sepolia.base.org',
+    rpcUrl: 'https://base-sepolia.g.alchemy.com/v2/demo',
     blockExplorer: 'https://sepolia.basescan.org',
     nativeCurrency: {
       name: 'ETH',
