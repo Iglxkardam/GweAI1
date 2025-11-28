@@ -7,7 +7,7 @@ import { baseSepolia } from 'viem/chains';
 
 // Multiple RPC endpoints for redundancy (ordered by reliability)
 const RPC_ENDPOINTS = [
-  'https://base-sepolia.g.alchemy.com/v2/demo', // Alchemy has best rate limits
+  'https://base-sepolia.g.alchemy.com/v2/-mGklZw8tTiO9fg9sRGQP', // Alchemy has best rate limits
   'https://base-sepolia.blockpi.network/v1/rpc/public',
   'https://base-sepolia-rpc.publicnode.com',
 ];

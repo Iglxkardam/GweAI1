@@ -114,7 +114,7 @@ export const useTradingContract = () => {
       
       // Multiple RPC endpoints for Base Sepolia - automatic fallback on rate limits
       const BASE_SEPOLIA_RPCS = [
-        'https://base-sepolia.g.alchemy.com/v2/demo',
+        'https://base-sepolia.g.alchemy.com/v2/-mGklZw8tTiO9fg9sRGQP',
         'https://base-sepolia.blockpi.network/v1/rpc/public',
         'https://base-sepolia-rpc.publicnode.com',
       ];
@@ -277,7 +277,7 @@ export const useTradingContract = () => {
       
       // Multiple RPC endpoints for Base Sepolia - automatic fallback on rate limits
       const BASE_SEPOLIA_RPCS = [
-        'https://base-sepolia.g.alchemy.com/v2/demo',
+        'https://base-sepolia.g.alchemy.com/v2/-mGklZw8tTiO9fg9sRGQP',
         'https://base-sepolia.blockpi.network/v1/rpc/public',
         'https://base-sepolia-rpc.publicnode.com',
       ];

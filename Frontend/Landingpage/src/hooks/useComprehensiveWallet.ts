@@ -100,7 +100,7 @@ export const useComprehensiveWallet = () => {
    * Create RPC provider for direct blockchain calls
    */
   const createProvider = useCallback(() => {
-    const rpcUrl = 'https://base-sepolia.g.alchemy.com/v2/demo';
+    const rpcUrl = 'https://base-sepolia.g.alchemy.com/v2/-mGklZw8tTiO9fg9sRGQP';
     return {
       send: async (method: string, params: any[]) => {
         try {

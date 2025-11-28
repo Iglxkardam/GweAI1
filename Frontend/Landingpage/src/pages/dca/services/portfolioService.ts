@@ -37,7 +37,7 @@ export async function getUserPortfolio(address: string): Promise<PortfolioData> 
     const publicClient = createPublicClient({
       chain: baseSepolia,
       transport: fallback([
-        http('https://base-sepolia.g.alchemy.com/v2/demo', { timeout: 8000 }),
+        http('https://base-sepolia.g.alchemy.com/v2/-mGklZw8tTiO9fg9sRGQP', { timeout: 8000 }),
         http('https://base-sepolia.blockpi.network/v1/rpc/public', { timeout: 8000 }),
         http('https://base-sepolia-rpc.publicnode.com', { timeout: 8000 }),
       ]),

@@ -54,7 +54,7 @@ export const VERIFIED_TOKENS = {
 export const NETWORK_CONFIG = {
   chainId: 84532, // Base Sepolia
   name: 'Base Sepolia',
-  rpcUrl: 'https://base-sepolia.g.alchemy.com/v2/demo', // Using Alchemy for better rate limits
+  rpcUrl: 'https://base-sepolia.g.alchemy.com/v2/-mGklZw8tTiO9fg9sRGQP', // Using Alchemy for better rate limits
   blockExplorer: 'https://sepolia.basescan.org',
 } as const;
 

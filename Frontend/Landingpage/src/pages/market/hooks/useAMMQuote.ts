@@ -60,7 +60,7 @@ export const useAMMQuote = () => {
   const publicClient = useMemo(() => createPublicClient({
     chain: baseSepolia,
     transport: fallback([
-      http('https://base-sepolia.g.alchemy.com/v2/demo', { timeout: 5000, retryCount: 2 }),
+      http('https://base-sepolia.g.alchemy.com/v2/-mGklZw8tTiO9fg9sRGQP', { timeout: 5000, retryCount: 2 }),
       http('https://base-sepolia.blockpi.network/v1/rpc/public', { timeout: 5000, retryCount: 2 }),
       http('https://base-sepolia-rpc.publicnode.com', { timeout: 5000, retryCount: 2 }),
     ]),
